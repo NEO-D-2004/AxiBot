@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+google-api-python-client
+google-auth-oauthlib
+google-auth
+python-dotenv
+tinydb
+requests
+google-genai
