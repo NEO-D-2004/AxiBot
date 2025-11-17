@@ -1,41 +1,60 @@
-# auth_helper.py
+# auth_helper.py  -- Desktop (Installed) flow (recommended for local dev)
+
 import os
 from pathlib import Path
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request  # <- FIX: import Request
 from dotenv import load_dotenv
 
-load_dotenv()  # if you store SCOPES or TOKEN_PATH in .env
+# load .env if present (optional)
+load_dotenv()
 
-# Scopes you need (adjust if you need write access)
-SCOPES = ["https://www.googleapis.com/auth/youtube.readonly",
-          "https://www.googleapis.com/auth/youtube.force-ssl"]
+# Scopes required (read + write chat)
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl"
+]
 
-# token path (default to storage/token.json)
 TOKEN_PATH = os.getenv("TOKEN_PATH", "storage/token.json")
 Path("storage").mkdir(parents=True, exist_ok=True)
 
 def main():
     creds = None
-    # load existing token if available
+
+    # If token file exists, load it
     if os.path.exists(TOKEN_PATH):
-        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+        except Exception as e:
+            print("Warning: failed to load existing token file:", e)
+            creds = None
 
-    # If no (valid) credentials, do the installed app flow
+    # If no valid credentials, do the Installed App Flow
     if not creds or not creds.valid:
+        # If we have expired credentials with a refresh token, refresh them
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-            # Desktop clients: run_local_server opens a browser and completes the flow.
-            # port=0 uses an available ephemeral port (no need to match console).
-            creds = flow.run_local_server(port=0)
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                print("Refresh failed, will run new authorization flow:", e)
+                creds = None
 
-        # Save the credentials for the next run
+        # Otherwise run the install flow to get new credentials
+        if not creds:
+            if not os.path.exists("credentials.json"):
+                raise FileNotFoundError(
+                    "Missing credentials.json. Download your OAuth client (Desktop) JSON "
+                    "from Google Cloud Console and save as credentials.json in the project root."
+                )
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            # run_local_server will open a browser and handle redirect on an ephemeral localhost port
+            creds = flow.run_local_server(port=0, prompt="consent")
+
+        # Save credentials for next run
         with open(TOKEN_PATH, "w") as token_file:
             token_file.write(creds.to_json())
-        print(f"Saved token to {TOKEN_PATH}")
+        print("Saved token to", TOKEN_PATH)
 
 if __name__ == "__main__":
     main()
