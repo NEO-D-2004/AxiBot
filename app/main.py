@@ -56,13 +56,58 @@ async def main():
     from app.youtube_listener import YouTubeChatListener
     yt_listener = YouTubeChatListener(youtube_client=youtube, callback=on_event)
 
+    engagement = None
+    from app.engagement import EngagementManager
+    engagement = EngagementManager(llm_client=gemini)
+
     # 5. Start Event Loops
     print("Starting Listeners (Streamlabs + Native YouTube)...")
+    
+    # Background task for engagement
+    async def engagement_loop():
+        print("Starting Engagement Loop...")
+        while True:
+            try:
+                if youtube.video_id:
+                    viewers, likes = youtube.get_video_stats(youtube.video_id)
+                    
+                    # Assume channel ID from settings or fetch from video details if needed
+                    # ideally we store channel_id in youtube client once found
+                    channel_id = settings.STREAMER_CHANNEL_ID
+                    subs = youtube.get_channel_subscribers(channel_id) if channel_id else 0
+                    
+                    # 1. Check Targets (Highest Priority)
+                    target_msg = await engagement.check_targets(likes, subs)
+                    if target_msg:
+                        print(f"Target Met: {target_msg}")
+                        youtube.send_message(target_msg)
+                        # Skip other engagement this turn to avoid spamming
+                        await asyncio.sleep(60)
+                        continue
+
+                    # 2. Check Triggers (Spikes)
+                    msg = await engagement.check_triggers(viewers)
+                    if not msg:
+                        # 3. Periodic Message
+                        msg = await engagement.get_next_message()
+                    
+                    if msg:
+                        print(f"Engagement Triggered: {msg}")
+                        youtube.send_message(msg)
+                        
+                await asyncio.sleep(120) # Check every 2 minutes (Quota Optimization)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"Engagement Loop Error: {e}")
+                await asyncio.sleep(60)
+
     try:
-        # Run both listeners concurrently
+        # Run both listeners and engagement loop concurrently
         await asyncio.gather(
             sl_listener.connect(),
-            yt_listener.start()
+            yt_listener.start(),
+            engagement_loop()
         )
     except asyncio.CancelledError:
         print("Bot stopping...")

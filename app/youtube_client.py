@@ -181,6 +181,104 @@ class YouTubeClient:
             print(f"Failed to get video details: {e}")
             return None
 
+    def get_concurrent_viewers(self, video_id):
+        """
+        Fetches the current number of concurrent viewers.
+        """
+        if not self.youtube:
+            return 0
+            
+        try:
+            request = self.youtube.videos().list(
+                part="liveStreamingDetails",
+                id=video_id
+            )
+            response = request.execute()
+            
+            if response["items"]:
+                details = response["items"][0].get("liveStreamingDetails", {})
+                return int(details.get("concurrentViewers", 0))
+            return 0
+        except HttpError as e:
+            print(f"Failed to get viewer count: {e}")
+            return 0
+        except Exception as e:
+            print(f"Error getting viewers: {e}")
+            return 0
+
+    def get_video_likes(self, video_id):
+        """
+        Fetches the current like count of the video.
+        """
+        if not self.youtube:
+            return 0
+            
+        try:
+            request = self.youtube.videos().list(
+                part="statistics",
+                id=video_id
+            )
+            response = request.execute()
+            if response["items"]:
+                stats = response["items"][0].get("statistics", {})
+                return int(stats.get("likeCount", 0))
+            return 0
+        except Exception as e:
+            print(f"Failed to get likes: {e}")
+            return 0
+
+    def get_channel_subscribers(self, channel_id):
+        """
+        Fetches the current subscriber count of the channel.
+        """
+        if not self.youtube:
+            return 0
+            
+        try:
+            request = self.youtube.channels().list(
+                part="statistics",
+                id=channel_id
+            )
+            response = request.execute()
+            if response["items"]:
+                stats = response["items"][0].get("statistics", {})
+                return int(stats.get("subscriberCount", 0))
+            return 0
+        except Exception as e:
+            print(f"Failed to get subscribers: {e}")
+            return 0
+
+        except Exception as e:
+            print(f"Failed to get subscribers: {e}")
+            return 0
+
+    def get_video_stats(self, video_id):
+        """
+        Fetches both concurrent viewers and like count in one call.
+        Returns: (viewers, likes)
+        """
+        if not self.youtube:
+            return 0, 0
+            
+        try:
+            request = self.youtube.videos().list(
+                part="liveStreamingDetails,statistics",
+                id=video_id
+            )
+            response = request.execute()
+            if response["items"]:
+                item = response["items"][0]
+                live_details = item.get("liveStreamingDetails", {})
+                stats = item.get("statistics", {})
+                
+                viewers = int(live_details.get("concurrentViewers", 0))
+                likes = int(stats.get("likeCount", 0))
+                return viewers, likes
+            return 0, 0
+        except Exception as e:
+            # print(f"Failed to get video stats: {e}")
+            return 0, 0
+
     def delete_message(self, message_id):
         """
         Deletes (hides) a message from the live chat.

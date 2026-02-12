@@ -1,0 +1,22 @@
+--- Test 1: Periodic Messages ---
+Generating 10 messages (expect no immediate repeats):
+1: If you are enjoying the content, please like and subscribe! It helps a lot! 🙏
+2: New here? Say hi in the chat! 👋
+3: Enjoying the stream? Consider subscribing for more! 💖
+4: Let's go for 10 Likes! Smash that button! 🚀
+5: Welcome to the stream! Don't forget to follow! 🌟
+6: Target: 10 Likes! We can do it! 💪
+7: Don't forget to Hit the LIKE & SUBSCRIBE Button! 👍🔔
+8: If you are enjoying the content, please like and subscribe! It helps a lot! 🙏
+9: New here? Say hi in the chat! 👋
+10: Enjoying the stream? Consider subscribing for more! 💖
+
+--- Test 2: Rate Limiting ---
+Success: Rate limit blocked message.
+Waiting 2.1 seconds...
+Success: Message generated after wait: Let's go for 10 Likes! Smash that button! 🚀
+
+--- Test 3: Viewer Spike Trigger ---
+Success: Small increase did not trigger.
+Viewer spike detected: 102 -> 110
+Success: Big increase triggered message: Welcome to the stream! Don't forget to follow! 🌟

@@ -1,24 +1,30 @@
 # 🤖 AxiBot - Local AI YouTube Moderator
 
-AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by **Local AI** (Google Gemma 2 via Ollama). It moderates chat, welcomes subscribers, and replies to viewers just like a human moderator—all without expensive API costs.
+AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by **Local AI** (Google Gemma 2 via Ollama) or **Gemini**. It moderates chat, welcomes subscribers, engages viewers, and manages stream goals just like a human moderator—all optimized for minimal API usage.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Python](https://img.shields.io/badge/python-3.10+-blue.svg) ![Local AI](https://img.shields.io/badge/AI-Ollama-orange.svg)
 
 ## ✨ Features
 
-- **🧠 Local Intelligence**: Runs locally using **Gemma 2 (2B)**. No API bills, no rate limits.
+- **🧠 Hybrid Intelligence**: Runs locally using **Gemma 2 (2B)** via Ollama or wirelessly via **Gemini 2.0 Flash**.
+- **🎯 Auto-Updating Goals**:
+    - **Like Target**: Automatically sets a goal (starts at 10). When hit, it celebrates and sets the next goal (+10).
+    - **Subscriber Target**: Tracks your sub count. When you get a new sub (hitting the "Next 10" milestone), it celebrates and updates the target.
+- **📣 Smart Engagement**:
+    - **Dynamic Hype**: Generates unique, non-repeating "Like & Subscribe" reminders using AI.
+    - **Human-like Timing**: Posts messages at random intervals (5-15 mins) to feel natural.
+    - **Spike Detection**: Welcomes new viewers when traffic spikes.
 - **🛡️ Auto-Moderation**: Instantly deletes abusive messages and timeouts users (5 mins).
-- **🚫 Anti-Spam**: Enforces a 60-second cooldown per user to prevent flooding.
-- **👀 Context Aware**: Knows your current **Stream Title** and **Game**, so it replies relevantly.
-- **🤖 Smart Replies**: Casual, human-like responses with minimal emoji usage.
-- **⛔ Nightbot Ignore**: Automatically ignores other bots like Nightbot.
+- **🚫 Anti-Spam**: Enforces a 60-second cooldown per user.
+- **⚡ Optimized Quota**: Smart polling allows the bot to run for **8.5+ hours** continuously on the free YouTube quota.
 
 ---
 
 ## 🛠️ Prerequisites
 
 1.  **Python 3.10+**: [Download Here](https://www.python.org/downloads/)
-2.  **Ollama**: Required for running the AI model. [Download Here](https://ollama.com/download)
+2.  **Ollama** (Optional for Local AI): [Download Here](https://ollama.com/download)
+3.  **Google Gemini Key** (Optional for Cloud AI): [Get Key Here](https://aistudio.google.com/)
 
 ---
 
@@ -35,13 +41,13 @@ AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by **Local AI**
     pip install -r requirements.txt
     ```
 
-3.  **Setup Local AI (Ollama)**
-    - Install Ollama from the link above.
-    - Open your terminal and run:
-      ```powershell
-      ollama pull gemma2:2b
-      ```
-    - Keep Ollama running in the background (`ollama serve`).
+3.  **Setup AI (Choose One)**
+    - **Option A: Local (Ollama)**
+        - Install Ollama.
+        - Run: `ollama pull gemma2:2b`
+        - Keep `ollama serve` running.
+    - **Option B: Cloud (Gemini)**
+        - Get an API key and add it to `.env`.
 
 ---
 
@@ -53,32 +59,19 @@ AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by **Local AI**
     cp .env.example .env
     ```
 
-2.  **Get YouTube Credenitals**
+2.  **Get YouTube Credentials**
     - Go to **[Google Cloud Console](https://console.cloud.google.com/)**.
-    - Create a New Project.
-    - Enable **YouTube Data API v3**.
-    - Go to **Credentials** -> **Create Credentials** -> **OAuth client ID**.
-    - Choose **Desktop App**.
-    - Download the JSON file, rename it to `client_secret.json`, and place it in the project folder.
+    - Create a New Project & Enable **YouTube Data API v3**.
+    - Create **OAuth client ID** (Desktop App).
+    - Download JSON as `client_secret.json`.
 
-3.  **Find Your Channel ID**
-    - Go to **[YouTube Advanced Settings](https://www.youtube.com/account_advanced)**.
-    - Copy the **Channel ID** (starts with `UC...`).
-
-4.  **Edit `.env`**
-    Open `.env` and fill in the details:
+3.  **Edit `.env`**
     ```ini
-    # File name of the JSON you downloaded
     YOUTUBE_CLIENT_SECRET_PATH=client_secret.json
-    
-    # Storage for the login token (auto-created)
     YOUTUBE_TOKEN_PATH=storage/token.json
-    
-    # YOUR Channel ID (The Streamer)
     STREAMER_CHANNEL_ID=UCxxxxxxxxxxxxxxxxx
-    
-    # Bot Name (Used to ignore self-replies)
     BOT_NAME=AxiBot
+    GEMINI_API_KEY=your_key_here (Optional)
     ```
 
 ---
@@ -91,28 +84,25 @@ AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by **Local AI**
     ```
 
 2.  **First Time Login**
-    - A browser window will open asking you to log in to Google.
-    - Log in with the **account you want the bot to speak from** (usually your main account or a dedicated bot brand account).
-    - Determine "unsafe app" warning? Click **Advanced -> Go to (Project Name) (unsafe)**. This happens because your app is in testing mode.
-    - Click **Allow**.
+    - A browser window will open. Log in with the account you want the bot to speak from.
+    - If you see "Unsafe App", click **Advanced -> Go to (Project) -> Allow**.
 
-3.  **Connection**
-    - The console will say: `Connected to Live Chat ID: ...`
-    - It will print the **Stream Title** it detected.
-    - The bot is now live!
+3.  **You're Live!**
+    - The bot will detect your active stream.
+    - It will automatically greet viewers and start monitoring chat.
 
 ---
 
 ## 📝 Customization
 
-- **Bad Words**: Edit `app/moderation_filter.py` to add/remove banned words.
-- **Cooldown**: Edit `app/router.py` (change `COOLDOWN_SECONDS`).
-- **AI Prompt**: Edit `app/local_client.py` to change how the bot speaks.
+- **Bad Words**: Edit `app/moderation_filter.py`.
+- **Engagement Settings**: Edit `app/engagement.py` to change message frequency or target increments.
+- **AI Personality**: Edit prompt templates in `app/local_client.py` or `app/gemini_client.py`.
 
 ---
 
 ## ❓ Troubleshooting
 
-- **"Quota Exceeded"**: The bot polls chat every 20 seconds. This allows for ~6 hours of runtime per day on the free tier.
-- **"Ollama Connection Error"**: Make sure Ollama is running (`ollama serve`).
+- **"Quota Exceeded"**: The bot is optimized for ~8.5 hours. If you stream longer, create a second project/credential.
+- **"Ollama Connection Error"**: Ensure `ollama serve` is running.
 - **Bot replying to itself**: Ensure `BOT_NAME` in `.env` matches the bot's display name exactly.
