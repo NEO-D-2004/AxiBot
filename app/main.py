@@ -1,5 +1,10 @@
 import asyncio
 import sys
+import os
+
+# Add project root to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.settings import settings
 from app.streamlabs_listener import StreamlabsListener
 from app.youtube_client import YouTubeClient
@@ -20,28 +25,43 @@ async def main():
     # 2. Find Active Live Chat
     # We need to find the chat ID before we start listening, 
     # so we know where to post replies.
-    if settings.STREAMER_CHANNEL_ID:
-        print(f"Auto-detecting live stream for channel: {settings.STREAMER_CHANNEL_ID}")
-        chat_id = youtube.get_live_chat_id_for_channel(settings.STREAMER_CHANNEL_ID)
-        if chat_id:
-            print(f"Connected to Live Chat ID: {chat_id}")
-            youtube.send_message("Hey Viewers Now Iam active you can chat with me by mentioning me...")
-            
-            # Fetch Stream Context for AI
-            if youtube.video_id:
-                details = youtube.get_video_details(youtube.video_id)
-                if details:
-                    print(f"Stream Context: {details.get('title')} | Channel: {details.get('channel_title')}")
-                    # Update the AI client with this context
-                    if hasattr(gemini, 'stream_context'):
-                        gemini.stream_context = details
+    try:
+        if settings.STREAMER_CHANNEL_ID:
+            print(f"Auto-detecting live stream for channel: {settings.STREAMER_CHANNEL_ID}")
+            chat_id = youtube.get_live_chat_id_for_channel(settings.STREAMER_CHANNEL_ID)
+            if chat_id:
+                print(f"Connected to Live Chat ID: {chat_id}")
+                youtube.send_message("Hey Viewers Now Iam active you can chat with me by mentioning me...")
+                
+                # Fetch Stream Context for AI
+                if youtube.video_id:
+                    details = youtube.get_video_details(youtube.video_id)
+                    if details:
+                        print(f"Stream Context: {details.get('title')} | Channel: {details.get('channel_title')}")
+                        # Update the AI client with this context
+                        if hasattr(gemini, 'stream_context'):
+                            gemini.stream_context = details
+            else:
+                print("WARNING: No active live stream found. The bot will NOT be able to reply.")
+                # We continue anyway, maybe they just want to test reading?
+                # Or maybe we should retry periodically? For MVP, we warn.
         else:
-            print("WARNING: No active live stream found. The bot will NOT be able to reply.")
-            # We continue anyway, maybe they just want to test reading?
-            # Or maybe we should retry periodically? For MVP, we warn.
-    else:
-        print("ERROR: STREAMER_CHANNEL_ID not set in .env")
-        return
+            print("ERROR: STREAMER_CHANNEL_ID not set in .env")
+            return
+            
+    except Exception as e:
+        error_str = str(e)
+        if "Token has been expired" in error_str or "invalid_grant" in error_str or "revoked" in error_str:
+            print("\n❌ CRITICAL AUTH ERROR: YouTube Token Expired!")
+            print(f"Deleting invalid token file at: {settings.YOUTUBE_TOKEN_PATH}")
+            if os.path.exists(settings.YOUTUBE_TOKEN_PATH):
+                os.remove(settings.YOUTUBE_TOKEN_PATH)
+            print("Please run 'python auth_helper.py' to re-authenticate.")
+            return
+        else:
+            print(f"Error during initialization: {error_str}")
+            # raise # Optionally suppress raise if we want to debug, but raising is correct.
+            raise
 
     # 3. Setup Router with clients
     router = MessageRouter(gemini_client=gemini, youtube_client=youtube)

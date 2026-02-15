@@ -28,7 +28,13 @@ class YouTubeClient:
             creds = Credentials.from_authorized_user_file(token_path)
             return build("youtube", "v3", credentials=creds)
         except Exception as e:
-            print(f"YouTube Auth Error: {e}")
+            # Check for RefreshError (Token expired/revoked)
+            if "Token has been expired or revoked" in str(e):
+                print(f"Error: Token expired. Deleting {token_path}. Please run auth_helper.py again.")
+                if os.path.exists(token_path):
+                    os.remove(token_path)
+            else:
+                print(f"YouTube Auth Error: {e}")
             return None
 
     def _load_cache(self):
