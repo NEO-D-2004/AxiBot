@@ -76,7 +76,7 @@ async def main():
     engagement = EngagementManager(llm_client=gemini)
 
     # 5. Start Event Loops
-    print("Starting Listeners (Native YouTube)...")
+    print("Starting Listeners (Streamlabs + Native YouTube)...")
     
     # Background task for engagement
     async def engagement_loop():
@@ -119,10 +119,12 @@ async def main():
 
     try:
         # Run listeners and engagement loop concurrently
-        await asyncio.gather(
+        tasks = [
             yt_listener.start(),
             engagement_loop()
-        )
+        ]
+        
+        await asyncio.gather(*tasks)
     except asyncio.CancelledError:
         print("Bot stopping...")
     except Exception as e:

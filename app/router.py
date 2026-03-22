@@ -90,23 +90,25 @@ class MessageRouter:
         # 2. Append to chat history
         self.chat_history.append(f"{user}: {message}")
 
-        # 3. Cooldown Check
-        if self._is_on_cooldown(user):
-            if is_mentioned:
-                print(f"User {user} is on cooldown.")
-            return
+        # 3. Append to chat history (Listen to everything)
+        self.chat_history.append(f"{user}: {message}")
 
-        # 4. Context-Aware AI Generation
+        # 4. Context-Aware AI Generation (Evaluate BEFORE Cooldown)
         if self.gemini_client:
-            print("Evaluating message for context-aware reply...")
+            print(f"Evaluating message from {user} for context-aware reply...")
             history_str = "\n".join(self.chat_history)
             
             reply = await self.gemini_client.generate_reply(user, message, history=history_str, is_mentioned=is_mentioned)
             
             if reply and "IGNORE_CHAT" not in reply:
+                # 5. Cooldown Check (Only enforced if AI decides to speak)
+                if self._is_on_cooldown(user) and not is_mentioned:
+                    print(f"Bot wanted to reply, but {user} is on cooldown. Skipping to avoid spam.")
+                    return
+
                 print(f"Bot Context-Aware Reply: {reply}")
                 
-                # Append bot output to memory so it remembers its own replies
+                # Append bot output to memory
                 self.chat_history.append(f"{self.bot_name}: {reply}")
 
                 if self.youtube_client:

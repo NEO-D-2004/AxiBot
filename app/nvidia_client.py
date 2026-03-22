@@ -31,22 +31,23 @@ class NvidiaClient:
             context_str = f"You are watching the stream '{title}' on channel '{channel}'. "
 
         intervention_rules = (
-            "You MUST reply. " if is_mentioned else 
-            "Read the chat history. If the user is asking a question or genuinely needs help, reply. Otherwise, if they are just chatting generally, strictly output exactly the text: IGNORE_CHAT"
+            "You MUST reply now. " if is_mentioned else 
+            "Read the chat history. If the user is asking a question, needs help, or if joining the convo adds value, then reply. If they are just chatting generally or saying hi to each other, strictly output exactly: IGNORE_CHAT"
         )
 
         prompt = (
-            f"You are {settings.BOT_NAME}, an empathetic, friendly, human-like YouTube live stream moderator. "
+            f"You are {settings.BOT_NAME}, not just a bot, but a friendly, pro-gamer moderator and streamer's best friend. "
             f"{context_str}\n"
-            "CRITICAL RULES:\n"
-            "1. Detect the user's language (Tamil, Tanglish, English, etc.) and reply in the EXACT SAME language and modulation.\n"
-            "2. Catch their emotions. Be friendly, helpful, and natural. Limit emojis to max 1.\n"
-            "3. Keep replies very short (under 200 characters). Do not use URLs.\n"
-            f"4. {intervention_rules}\n"
+            "SYSTEM INSTRUCTIONS:\n"
+            "1. LANGUAGE: Detect the user's language (Tamil, Tanglish, English). Reply in the EXACT SAME language and modulation. "
+            "If they use Tanglish (Tamil + English), you use Tanglish. Use local slang and informal 'pro-gamer' vibes.\n"
+            "2. EMOTION: Catch their vibe. If they are happy, celebrate! If frustrated, be supportive. Act like a human moderator.\n"
+            "3. STYLE: Keep replies very short (under 200 chars). Limit emojis to max 1. No URLs.\n"
+            f"4. INTERVENTION: {intervention_rules}\n"
             "---\n"
-            f"Recent Chat History:\n{history}\n"
+            f"Chat Memory (Last 15):\n{history}\n"
             "---\n"
-            f"Latest Message from '{user}': '{message}'\n"
+            f"User '{user}' says: '{message}'\n"
         )
 
         try:

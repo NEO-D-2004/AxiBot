@@ -10,6 +10,10 @@ class YouTubeChatListener:
         self.is_running = False
         self.next_page_token = None
         
+        # Dedicated client for the background polling thread to fix SSL socket thread-safety issues
+        orig_client = self.youtube_client.get_new_client()
+        self.polling_client = orig_client if orig_client else self.youtube_client.youtube
+        
         # Deduplication
         self.processed_ids = deque(maxlen=200)
         
@@ -66,21 +70,20 @@ class YouTubeChatListener:
                 kwargs["pageToken"] = self.next_page_token
 
             # Execute API call in thread
+            # Use the dedicated polling client to maintain thread safety
             response = await loop.run_in_executor(
                 None, 
-                lambda: self.youtube_client.youtube.liveChatMessages().list(**kwargs).execute()
+                lambda: self.polling_client.liveChatMessages().list(**kwargs).execute()
             )
+
+            # If this is the very first poll, we want to discard these historical items 
+            # so the bot doesn't spam replies to old chats upon starting.
+            is_first_request = (kwargs.get("pageToken") is None)
 
             # Update pagination
             self.next_page_token = response.get("nextPageToken")
             
-            # Use 'pollingIntervalMillis' from API if provided (and sensible), 
-            # otherwise use our adaptive logic.
-            # API usually suggests ~3-5 seconds. We want to respect it but also optimize.
-            # api_interval = response.get("pollingIntervalMillis", 5000) / 1000
-
             items = response.get("items", [])
-            
             new_messages_count = 0
             
             if items:
@@ -91,9 +94,12 @@ class YouTubeChatListener:
                         msg_id = message_data.get("id")
                         if msg_id and msg_id not in self.processed_ids:
                             self.processed_ids.append(msg_id)
-                            new_messages_count += 1
-                            if self.callback:
-                                await self.callback(message_data)
+                            
+                            # Ignore processing old messages on first boot
+                            if not is_first_request:
+                                new_messages_count += 1
+                                if self.callback:
+                                    await self.callback(message_data)
             
             # Adaptive Logic
             if new_messages_count > 0:
@@ -110,6 +116,9 @@ class YouTubeChatListener:
             print(f"YouTube Polling API Error: {e}")
             # If 403/QuotaExceeded, we should probably stop or sleep long
             self.current_poll_interval = 60 # Sleep longer on error
+        except Exception as e:
+            print(f"Unexpected Polling Error: {e}")
+            self.current_poll_interval = 30 # Safety backoff
 
     def _parse_item(self, item):
         """

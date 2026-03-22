@@ -37,6 +37,22 @@ class YouTubeClient:
                 print(f"YouTube Auth Error: {e}")
             return None
 
+    def get_new_client(self):
+        """
+        Returns a newly authenticated, independent YouTube service object.
+        Used to prevent SSL thread-safety issues when making API calls from background threads.
+        """
+        token_path = settings.YOUTUBE_TOKEN_PATH
+        if not os.path.exists(token_path):
+            return None
+        try:
+            from google.oauth2.credentials import Credentials
+            from googleapiclient.discovery import build
+            creds = Credentials.from_authorized_user_file(token_path)
+            return build("youtube", "v3", credentials=creds)
+        except Exception:
+            return None
+
     def _load_cache(self):
         if os.path.exists(self.CACHE_FILE):
             try:
