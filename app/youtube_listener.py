@@ -118,21 +118,51 @@ class YouTubeChatListener:
         snippet = item.get("snippet", {})
         msg_type = snippet.get("type")
         
-        # We only care about text messages for replying
-        if msg_type == "textMessageEvent":
-            user_name = item.get("authorDetails", {}).get("displayName", "Unknown")
-            user_id = item.get("authorDetails", {}).get("channelId")
-            message_text = snippet.get("textMessageDetails", {}).get("messageText", "")
-            
-            # Standardized Format
-            return {
-                "id": item.get("id"),
-                "platform": "youtube",
-                "type": "chat",
-                "user": user_name,
-                "user_id": user_id,
-                "message": message_text,
-                "timestamp": snippet.get("publishedAt")
-            }
+        user_name = item.get("authorDetails", {}).get("displayName", "Unknown")
+        user_id = item.get("authorDetails", {}).get("channelId")
         
+        base_data = {
+            "id": item.get("id"),
+            "platform": "youtube",
+            "type": "chat",
+            "user": user_name,
+            "user_id": user_id,
+            "message": "",
+            "timestamp": snippet.get("publishedAt"),
+            "raw_type": msg_type
+        }
+
+        if msg_type == "textMessageEvent":
+            base_data["message"] = snippet.get("textMessageDetails", {}).get("messageText", "")
+            return base_data
+            
+        elif msg_type == "superChatEvent":
+            details = snippet.get("superChatDetails", {})
+            amount = details.get("amountDisplayString", "")
+            msg = details.get("userComment", "")
+            base_data["type"] = "superChat"
+            base_data["message"] = msg
+            base_data["amount"] = amount
+            return base_data
+            
+        elif msg_type == "superStickerEvent":
+            details = snippet.get("superStickerDetails", {})
+            amount = details.get("amountDisplayString", "")
+            base_data["type"] = "superSticker"
+            base_data["amount"] = amount
+            return base_data
+            
+        elif msg_type == "newSponsorEvent":
+            base_data["type"] = "newSponsor"
+            return base_data
+            
+        elif msg_type == "memberMilestoneChatEvent":
+            details = snippet.get("memberMilestoneChatDetails", {})
+            msg = details.get("userComment", "")
+            level = details.get("memberLevelName", "")
+            base_data["type"] = "memberMilestone"
+            base_data["message"] = msg
+            base_data["member_level"] = level
+            return base_data
+            
         return None

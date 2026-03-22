@@ -6,7 +6,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.settings import settings
-from app.streamlabs_listener import StreamlabsListener
 from app.youtube_client import YouTubeClient
 from app.router import MessageRouter
 
@@ -67,8 +66,6 @@ async def main():
     # 4. Setup Listeners
     async def on_event(event_data):
         await router.route_message(event_data)
-
-    sl_listener = StreamlabsListener(callback=on_event)
     
     # Import locally to avoid circular imports if any, or just for clarity
     from app.youtube_listener import YouTubeChatListener
@@ -79,7 +76,7 @@ async def main():
     engagement = EngagementManager(llm_client=gemini)
 
     # 5. Start Event Loops
-    print("Starting Listeners (Streamlabs + Native YouTube)...")
+    print("Starting Listeners (Native YouTube)...")
     
     # Background task for engagement
     async def engagement_loop():
@@ -121,9 +118,8 @@ async def main():
                 await asyncio.sleep(60)
 
     try:
-        # Run both listeners and engagement loop concurrently
+        # Run listeners and engagement loop concurrently
         await asyncio.gather(
-            sl_listener.connect(),
             yt_listener.start(),
             engagement_loop()
         )

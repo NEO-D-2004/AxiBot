@@ -17,76 +17,43 @@ class MessageRouter:
 
     async def route_message(self, message_data: dict):
         """
-        Parses raw event data and routes it if it's a valid chat message.
+        Parses raw event data and routes it if it's a valid chat message or alert.
         """
-        # Debug: Print ALL events to see structure
-        # print(f"[Router Debug] Processing: {message_data}")
-
-        # Handling Streamlabs 'event' structure
-        if not isinstance(message_data, dict):
+        if not isinstance(message_data, dict) or message_data.get('platform') != 'youtube':
             return
 
-        user_id = None
-        message_id = None
+        msg_type = message_data.get('type')
+        user = message_data.get('user', 'Unknown User')
+        user_id = message_data.get('user_id')
+        message_id = message_data.get('id')
+        
+        # 1. Alert Handling (Native YouTube)
+        if msg_type in ['superChat', 'superSticker', 'newSponsor', 'memberMilestone']:
+            print(f"New Native Alert: {msg_type} from {user}")
+            if self.gemini_client and self.youtube_client:
+                # Generate a custom welcome/thank you message
+                if msg_type == 'newSponsor':
+                    prompt = "I just became a new channel member!"
+                elif msg_type in ['superChat', 'superSticker']:
+                    amount = message_data.get('amount', '')
+                    prompt = f"I just sent a Super Chat/Sticker for {amount}!"
+                else: # memberMilestone
+                    level = message_data.get('member_level', '')
+                    prompt = f"I just renewed my membership ({level})!"
+                    
+                print(f"Generating alert reply for {user}...")
+                reply = await self.gemini_client.generate_reply(user, prompt)
+                
+                if reply and "IGNORE_CHAT" not in reply:
+                    self.youtube_client.send_message(reply)
+            return
 
-        # Standardized Internal Format (Native Listener)
-        if message_data.get('platform') == 'youtube' and message_data.get('type') == 'chat':
-            user = message_data.get('user')
-            message = message_data.get('message')
-            user_id = message_data.get('user_id')
-            message_id = message_data.get('id')
-            # Fall through to processing
-        else:
-
-            # Legacy/Streamlabs Handling
-            event_type = message_data.get('type')
+        # 2. Normal Chat Handling
+        if msg_type != 'chat':
+            return
             
-            # 1. Alert Handling (Follow/Subscription)
-            if event_type in ['follow', 'subscription', 'resub']:
-                # The data structure varies, but usually 'name' or 'message' contains the user
-                # Streamlabs often sends: { 'type': 'follow', 'message': [{'name': 'User', ...}] }
-                # OR a flat object. We try to extract safely.
-                name = message_data.get('name')
-                
-                # Check if message is a list of events
-                raw_msg = message_data.get('message')
-                if isinstance(raw_msg, list) and len(raw_msg) > 0:
-                    name = raw_msg[0].get('name')
-                elif isinstance(raw_msg, dict):
-                    name = raw_msg.get('name')
-                
-                if name:
-                    print(f"New Alert: {event_type} from {name}")
-                    if self.gemini_client:
-                        # Generate a custom welcome message
-                        prompt = (
-                            f"Generate a very short, enthusiastic thank you message for '{name}' who just subscribed to the channel. "
-                            f"You are {self.bot_name}. No URLs."
-                        )
-                        reply = await self.gemini_client.generate_reply(name, prompt) # overload or use new method?
-                        # Actually generate_reply takes (user, message). Use message as the prompt context or overload?
-                        # Let's direct call client or just pass the prompt as the 'message' effectively.
-                        # Wait, generate_reply assumes "The viewer said: {message}". 
-                        # We should add a specific method or just hack it. 
-                        # Hack: Pass a special flag or just use the prompt.
-                        # For now, let's use the underlying client directly or modify generate_reply.
-                        # Easiest: Just use the client model directly here or add helper.
-                        
-                        # Let's add a helper in GeminiClient? Or just reuse generate_content from here if we had access?
-                        # We can abuse generate_reply by saying "I just subscribed!" as the message.
-                        reply = await self.gemini_client.generate_reply(name, "I just subscribed to the channel!")
-                        
-                        if reply and self.youtube_client:
-                            self.youtube_client.send_message(reply)
-                return
-
-            # Normal Streamlabs Chat (Fallback)
-            print(f"[Streamlabs Event] Type: {event_type} | Data: {message_data}")
-            user = message_data.get('from') or message_data.get('user') or message_data.get('name')
-            message = message_data.get('message') or message_data.get('body') or message_data.get('text')
-
-        if not user or not message or not isinstance(message, str):
-            # If we haven't extracted user/message properly yet
+        message = message_data.get('message')
+        if not message or not isinstance(message, str):
             return
 
         # 0. Self-Reply Prevention
