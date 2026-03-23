@@ -38,6 +38,18 @@ async def main():
                         # Update the AI client with this context
                         if hasattr(gemini, 'stream_context'):
                             gemini.stream_context = details
+                
+                # Fetch Channel Brain (Videos/Streams)
+                print(f"Fetching Channel Brain for: {settings.STREAMER_CHANNEL_ID}...")
+                latest_videos = youtube.get_latest_videos(settings.STREAMER_CHANNEL_ID)
+                upcoming_streams = youtube.get_upcoming_streams(settings.STREAMER_CHANNEL_ID)
+                
+                if hasattr(gemini, 'channel_knowledge'):
+                    gemini.channel_knowledge = {
+                        "latest_videos": latest_videos,
+                        "upcoming_streams": upcoming_streams
+                    }
+                    print(f"Channel Brain Loaded: {len(latest_videos)} videos, {len(upcoming_streams)} streams.")
             else:
                 print("WARNING: No active live stream found. The bot will NOT be able to reply.")
                 # We continue anyway, maybe they just want to test reading?

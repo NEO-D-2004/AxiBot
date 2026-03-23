@@ -339,6 +339,62 @@ class YouTubeClient:
         except HttpError as e:
             print(f"Failed to timeout user: {e}")
 
+    def get_latest_videos(self, channel_id, max_results=5):
+        """
+        Fetches the latest videos uploaded to the channel.
+        """
+        if not self.youtube:
+            return []
+        
+        try:
+            request = self.youtube.search().list(
+                part="snippet",
+                channelId=channel_id,
+                order="date",
+                type="video",
+                maxResults=max_results
+            )
+            response = request.execute()
+            videos = []
+            for item in response.get("items", []):
+                videos.append({
+                    "title": item["snippet"]["title"],
+                    "id": item["id"]["videoId"],
+                    "published_at": item["snippet"]["publishedAt"]
+                })
+            return videos
+        except Exception as e:
+            print(f"Failed to fetch latest videos: {e}")
+            return []
+
+    def get_upcoming_streams(self, channel_id, max_results=3):
+        """
+        Fetches upcoming scheduled live streams for the channel.
+        """
+        if not self.youtube:
+            return []
+            
+        try:
+            request = self.youtube.search().list(
+                part="snippet",
+                channelId=channel_id,
+                eventType="upcoming",
+                type="video",
+                maxResults=max_results
+            )
+            response = request.execute()
+            streams = []
+            for item in response.get("items", []):
+                streams.append({
+                    "title": item["snippet"]["title"],
+                    "id": item["id"]["videoId"],
+                    "scheduled_start": item["snippet"].get("publishedAt") # actually scheduledStartTime in different resource, but search snippet has publishedAt
+                })
+            return streams
+        except Exception as e:
+            print(f"Failed to fetch upcoming streams: {e}")
+            return []
+
 if __name__ == "__main__":
     # Test standalone (Requires a valid live video ID)
     client = YouTubeClient()

@@ -15,8 +15,8 @@ class MessageRouter:
         self.COOLDOWN_SECONDS = 60
         self.chat_history = collections.deque(maxlen=15)
         
-        # Per-user recent history for summarization (6 messages trigger)
-        self.user_session_history = collections.defaultdict(lambda: collections.deque(maxlen=6))
+        # Per-user recent history for summarization (10 messages trigger)
+        self.user_session_history = collections.defaultdict(lambda: collections.deque(maxlen=10))
 
 
 
@@ -105,7 +105,7 @@ class MessageRouter:
             
             # Add to session history for summarization trigger
             self.user_session_history[user_id].append(message)
-            if len(self.user_session_history[user_id]) >= 6:
+            if len(self.user_session_history[user_id]) >= 10:
                 # Trigger background summarization
                 asyncio.create_task(self._summarize_user(user_id, user))
 
@@ -147,7 +147,7 @@ class MessageRouter:
 
     async def _summarize_user(self, user_id: str, display_name: str):
         """
-        Uses AI to UPDATE a brief personality summary based on the last 6 messages.
+        Uses AI to UPDATE a brief personality summary based on the last 10 messages.
         It fetches the OLD summary and merges it with the NEW history.
         """
         # Fetch current memory

@@ -10,6 +10,10 @@ class NvidiaClient:
             api_key=settings.NVIDIA_API_KEY
         )
         self.stream_context = {}
+        self.channel_knowledge = {
+            "latest_videos": [],
+            "upcoming_streams": []
+        }
         self.fallback_messages = [
             "I'm overloaded right now! 😵",
             "Too many messages! Give me a second... 🕒",
@@ -30,14 +34,37 @@ class NvidiaClient:
             channel = self.stream_context.get("channel_title", "Unknown Channel")
             context_str = f"You are watching the stream '{title}' on channel '{channel}'. "
 
+        # Format Channel Knowledge for prompt
+        videos_str = "\n".join([f"- {v['title']} (ID: {v['id']})" for v in self.channel_knowledge.get("latest_videos", [])])
+        streams_str = "\n".join([f"- {s['title']} (ID: {s['id']})" for s in self.channel_knowledge.get("upcoming_streams", [])])
+        
+        channel_brain = (
+            f"CHANNEL KNOWLEDGE:\n"
+            f"Latest Videos:\n{videos_str if videos_str else 'No recent videos.'}\n"
+            f"Upcoming Streams:\n{streams_str if streams_str else 'No streams scheduled.'}\n"
+        )
+
         intervention_rules = (
             "You MUST reply now. " if is_mentioned else 
-            "Read the chat history. ONLY reply if the latest message is a clear question, a doubt, or a request for help. If it is just a greeting ('hi', 'hello'), a casual comment ('nice play', 'lol'), or a general conversation, you MUST strictly output exactly: IGNORE_CHAT. Do not be over-talkative."
+            "Read the chat history and the latest message. "
+            "STRICT FILTERING RULES:\n"
+            "1. MESSAGE TARGET: Determine who the message is for. Most casual messages and messages containing 'bro' are for the streamer (e.g., 'nice play bro', 'sapta bro', 'clutch god'). "
+            "If the message is for the streamer, you MUST strictly output exactly: IGNORE_CHAT.\n"
+            "2. BOT DUTY: You only speak if the user is asking a direct question about the channel, the game, the schedule, or needs help with something binary (like commands). "
+            "If it's just casual chat, greeting, or reaction to the stream, output: IGNORE_CHAT.\n"
+            "3. MODERATOR ROLE: If there is a doubt about the stream or channel, use your 'CHANNEL KNOWLEDGE' to answer accurately. "
+            "If you don't know the answer and it's not in your knowledge, do not make it up; just stay silent or say the streamer will answer soon.\n"
+            "4. NO PLAIN EMOJIS: Never reply with only an emoji. Your reply must contain text. If you feel only an emoji is needed, it's better to IGNORE_CHAT.\n"
+            "5. NEVER be over-talkative. Quality over quantity."
+            "6. CASUAL CHAT FILTER: If the user says 'bro', 'lol', 'haha', 'nice', 'cool', or any short casual reaction, you dont reply "
+            "7. If the user asks 'who am I?', 'tell about me', or 'do you remember me?', use the information in the 'User Profile Header' to give them a friendly, personal answer."
+            "8. Do Not reply to the messages that are only with emojis like reactions , output: IGNORE_CHAT.\n"   
         )
 
         prompt = (
             f"You are {settings.BOT_NAME}, not just a bot, but a friendly, pro-gamer moderator and streamer's best friend. "
             f"{context_str}\n"
+            f"{channel_brain}\n"
             "SYSTEM INSTRUCTIONS:\n"
             "1. LANGUAGE: Match the user's language 1:1. If they chat in English, reply in English. If they use Tamil, use Tamil. "
             "If they use Tanglish, you use Tanglish. DO NOT force Tamil if the user is speaking English.\n"
