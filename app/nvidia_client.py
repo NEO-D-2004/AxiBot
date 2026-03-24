@@ -45,20 +45,33 @@ class NvidiaClient:
         )
 
         intervention_rules = (
-            "You MUST reply now. " if is_mentioned else 
-            "Read the chat history and the latest message. "
-            "STRICT FILTERING RULES:\n"
-            "1. MESSAGE TARGET: Determine who the message is for. Most casual messages and messages containing 'bro' are for the streamer (e.g., 'nice play bro', 'sapta bro', 'clutch god'). "
-            "If the message is for the streamer, you MUST strictly output exactly: IGNORE_CHAT.\n"
-            "2. BOT DUTY: You only speak if the user is asking a direct question about the channel, the game, the schedule, or needs help with something binary (like commands). "
-            "If it's just casual chat, greeting, or reaction to the stream, output: IGNORE_CHAT.\n"
-            "3. MODERATOR ROLE: If there is a doubt about the stream or channel, use your 'CHANNEL KNOWLEDGE' to answer accurately. "
-            "If you don't know the answer and it's not in your knowledge, do not make it up; just stay silent or say the streamer will answer soon.\n"
-            "4. NO PLAIN EMOJIS: Never reply with only an emoji. Your reply must contain text. If you feel only an emoji is needed, it's better to IGNORE_CHAT.\n"
-            "5. NEVER be over-talkative. Quality over quantity."
-            "6. CASUAL CHAT FILTER: If the user says 'bro', 'lol', 'haha', 'nice', 'cool', or any short casual reaction, you dont reply "
-            "7. If the user asks 'who am I?', 'tell about me', or 'do you remember me?', use the information in the 'User Profile Header' to give them a friendly, personal answer."
-            "8. Do Not reply to the messages that are only with emojis like reactions , output: IGNORE_CHAT.\n"   
+            "You MUST classify the message first.\n"
+            "STEP 1: CLASSIFY MESSAGE TYPE:\n"
+            "- QUESTION: contains a clear question about stream, channel, game, commands, or schedule.\n"
+            "- NON-QUESTION: greetings, reactions, jokes, casual chat, emojis, or talking to streamer.\n\n"
+            "STEP 2: DECISION:\n"
+            "- If NOT a QUESTION → output EXACTLY: IGNORE_CHAT\n"
+            "- If QUESTION but NOT related to stream/channel/game → output EXACTLY: IGNORE_CHAT\n"
+            "- If QUESTION and RELATED → answer briefly\n\n"
+            "STRICT RULES:\n"
+            "1. Messages with 'bro', 'nice', 'lol', 'haha', '🔥', etc → IGNORE_CHAT\n"
+            "2. Messages without '?' are usually NOT questions → IGNORE_CHAT\n"
+            "3. If unsure → IGNORE_CHAT\n"
+            "4. NEVER guess or force a reply\n"
+        )
+
+        examples = (
+            "EXAMPLES:\n"
+            "User: 'nice play bro'\n"
+            "Output: IGNORE_CHAT\n\n"
+            "User: 'lol 😂'\n"
+            "Output: IGNORE_CHAT\n\n"
+            "User: 'when is next stream?'\n"
+            "Output: Answer\n\n"
+            "User: 'what game is this?'\n"
+            "Output: Answer\n\n"
+            "User: 'sapta bro'\n"
+            "Output: IGNORE_CHAT\n\n"
         )
 
         prompt = (
@@ -73,6 +86,7 @@ class NvidiaClient:
             "4. STYLE: Keep replies very short (under 200 chars). Avoid emojis unless absolutely necessary for the emotion. Use informal 'pro-gamer' vibes.\n"
             "5. SELF-AWARENESS: If the user asks 'who am I?', 'tell about me', or 'do you remember me?', use the information in the 'User Profile Header' to give them a friendly, personal answer.\n"
             f"6. INTERVENTION: {intervention_rules}\n"
+            f"{examples}\n"
             f"User Profile Header: {user_memory}\n"
             f"Chat Memory (Last 15):\n{history}\n"
             "---\n"
@@ -89,6 +103,16 @@ class NvidiaClient:
             
             if response.choices and response.choices[0].message.content:
                 reply = response.choices[0].message.content.strip()
+                
+                # HARD FILTER
+                if reply.upper() == "IGNORE_CHAT":
+                    return None
+                
+                # Extra safety: ignore short/generic replies
+                low_value = ["lol", "nice", "haha", "cool"]
+                if reply.lower() in low_value:
+                    return None
+                    
                 return reply
             return None
             
