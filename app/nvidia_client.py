@@ -32,7 +32,7 @@ class NvidiaClient:
         if self.stream_context:
             title = self.stream_context.get("title", "Unknown Stream")
             channel = self.stream_context.get("channel_title", "Unknown Channel")
-            context_str = f"You are watching the stream '{title}' on channel '{channel}'. "
+            context_str = f"You are watching the stream '{title}' on channel '{channel}'."
 
         # Format Channel Knowledge for prompt
         videos_str = "\n".join([f"- {v['title']} (ID: {v['id']})" for v in self.channel_knowledge.get("latest_videos", [])])
@@ -44,39 +44,8 @@ class NvidiaClient:
             f"Upcoming Streams:\n{streams_str if streams_str else 'No streams scheduled.'}\n"
         )
 
-        intervention_rules = (
-            "You MUST classify the message first.\n"
-            "STEP 1: CLASSIFY MESSAGE TYPE:\n"
-            "- QUESTION: contains a clear question about stream, channel, game, commands, or schedule.\n"
-            "- NON-QUESTION: greetings, reactions, jokes, casual chat, emojis, or talking to streamer.\n\n"
-            "STEP 2: DECISION:\n"
-            "- If NOT a QUESTION → output EXACTLY: IGNORE_CHAT\n"
-            "- If QUESTION but NOT related to stream/channel/game → output EXACTLY: IGNORE_CHAT\n"
-            "- If QUESTION and RELATED → answer briefly\n\n"
-            "STRICT RULES:\n"
-            "1. Messages with 'bro', 'nice', 'lol', 'haha', '🔥', etc → IGNORE_CHAT\n"
-            "2. Messages without '?' are usually NOT questions → IGNORE_CHAT\n"
-            "3. If unsure → IGNORE_CHAT\n"
-            "4. NEVER guess or force a reply\n"
-        )
-
-        examples = (
-            "EXAMPLES:\n"
-            "User: 'nice play bro'\n"
-            "Output: IGNORE_CHAT\n\n"
-            "User: 'lol 😂'\n"
-            "Output: IGNORE_CHAT\n\n"
-            "User: 'when is next stream?'\n"
-            "Output: Answer\n\n"
-            "User: 'what game is this?'\n"
-            "Output: Answer\n\n"
-            "User: 'sapta bro'\n"
-            "Output: IGNORE_CHAT\n\n"
-        )
-
-        prompt = (
-            f"You are {settings.BOT_NAME}, not just a bot, but a friendly, pro-gamer moderator and streamer's best friend. "
-            f"{context_str}\n"
+        system_instructions = (
+            f"You are {settings.BOT_NAME}, not just a bot, but a friendly, pro-gamer moderator and streamer's best friend. {context_str}\n"
             f"{channel_brain}\n"
             "SYSTEM INSTRUCTIONS:\n"
             "1. LANGUAGE: Match the user's language 1:1. If they chat in English, reply in English. If they use Tamil, use Tamil. "
@@ -85,19 +54,43 @@ class NvidiaClient:
             "3. EMOTION: Catch their vibe. If they are happy, celebrate! If frustrated, be supportive. Act like a human moderator friend.\n"
             "4. STYLE: Keep replies very short (under 200 chars). Avoid emojis unless absolutely necessary for the emotion. Use informal 'pro-gamer' vibes.\n"
             "5. SELF-AWARENESS: If the user asks 'who am I?', 'tell about me', or 'do you remember me?', use the information in the 'User Profile Header' to give them a friendly, personal answer.\n"
-            f"6. INTERVENTION: {intervention_rules}\n"
-            f"{examples}\n"
-            f"User Profile Header: {user_memory}\n"
-            f"Chat Memory (Last 15):\n{history}\n"
-            "---\n"
-            f"User '{user}' says: '{message}'\n"
+            "6. CRITICAL RULES:\n"
+            "  * Output 'IGNORE_CHAT' for casual chit-chat, gameplay reactions, greetings to the streamer, or casual questions not related to the channel (e.g. 'enna sapta', 'bro reply').\n"
+            "  * Generate a short, friendly reply (under 200 characters) in the user's language/vibe if they ask a relevant question about the stream, channel, game, commands, schedule, or if they mention @AxiBot.\n\n"
+            "EXAMPLES OF MESSAGES TO REPLY TO:\n"
+            "- User: 'when is next stream?' -> Next live stream is Friday Fun on Friday! 😊\n"
+            "- User: 'bro indha game per enna?' -> I don't know the game name yet, bro! 😉\n"
+            "- User: 'what was the last video about?' -> It was 'Epic Minecraft Build' (vid123)!\n"
+            "- User: 'Hello @AxiBot, how are you?' -> Hey! I'm doing great, how are you? 😊\n\n"
+            "EXAMPLES OF MESSAGES TO IGNORE (Output EXACTLY 'IGNORE_CHAT'):\n"
+            "- User: 'Bro nice play!' -> IGNORE_CHAT\n"
+            "- User: 'How are you streamer?' -> IGNORE_CHAT\n"
+            "- User: 'enna sapta bro' -> IGNORE_CHAT\n"
+            "- User: 'bro reply pannu' -> IGNORE_CHAT\n"
+            "- User: 'lol true' -> IGNORE_CHAT\n\n"
+            "OUTPUT FORMAT RULES:\n"
+            "  * If ignoring, your output MUST be EXACTLY: IGNORE_CHAT\n"
+            "  * If replying, your output must be a short, friendly message under 200 characters.\n"
+            "  * Output ONLY the response or IGNORE_CHAT. Do not output any classification steps, headers, explanations, or quotes."
         )
+
+        user_prompt = ""
+        if user_memory:
+            user_prompt += f"User Profile Header: {user_memory}\n"
+        if history:
+            user_prompt += f"Chat Memory (Last 15):\n{history}\n"
+        user_prompt += f"User '{user}' says: '{message}'"
+        if is_mentioned:
+            user_prompt += "\n(Note: The bot was explicitly mentioned in this message)"
 
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
+                messages=[
+                    {"role": "system", "content": system_instructions},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.2,
                 max_tokens=150
             )
             
@@ -105,16 +98,16 @@ class NvidiaClient:
                 reply = response.choices[0].message.content.strip()
                 
                 # HARD FILTER
-                if reply.upper() == "IGNORE_CHAT":
-                    return None
+                if "IGNORE_CHAT" in reply.upper() or reply.upper() == "IGNORE_CHAT":
+                    return "IGNORE_CHAT"
                 
                 # Extra safety: ignore short/generic replies
                 low_value = ["lol", "nice", "haha", "cool"]
                 if reply.lower() in low_value:
-                    return None
+                    return "IGNORE_CHAT"
                     
                 return reply
-            return None
+            return "IGNORE_CHAT"
             
         except Exception as e:
             error_str = str(e)
@@ -123,7 +116,7 @@ class NvidiaClient:
                 return random.choice(self.fallback_messages)
             
             print(f"Nvidia API Error: {e}")
-            return None
+            return "IGNORE_CHAT"
 
 
     async def generate_engagement_message(self, category: str) -> str:

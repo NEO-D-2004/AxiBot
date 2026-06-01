@@ -69,7 +69,7 @@ AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by **Nvidia Ope
     STREAMER_CHANNEL_ID=UCxxxxxxxxxxxxxxxxx
     BOT_NAME=AxiBot
     NVIDIA_API_KEY=your_nvidia_api_key_here
-    NVIDIA_MODEL_ID=google/gemma-3-4b-it
+    NVIDIA_MODEL_ID=google/gemma-3n-e2b-it
     ```
 
 ---

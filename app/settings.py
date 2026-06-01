@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     YOUTUBE_TOKEN_PATH: str = "storage/token.json"
     STREAMER_CHANNEL_ID: str # Channel ID of the streamer to watch
     NVIDIA_API_KEY: str
-    NVIDIA_MODEL_ID: str = "google/gemma-3-4b-it"  # Defaulting to gemma 3
+    NVIDIA_MODEL_ID: str = "google/gemma-3n-e2b-it"  # Defaulting to gemma-3n-e2b-it
     BOT_NAME: str = "AxiBot"
 
     class Config:
