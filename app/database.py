@@ -55,3 +55,23 @@ class DatabaseManager:
             conn.row_factory = sqlite3.Row
             cursor = conn.execute("SELECT * FROM users")
             return cursor.fetchall()
+
+    def delete_user(self, user_id):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+            conn.commit()
+
+    def update_user_details(self, user_id, display_name, summary, message_count):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                UPDATE users 
+                SET display_name = ?, personality_summary = ?, message_count = ?
+                WHERE user_id = ?
+            """, (display_name, summary, message_count, user_id))
+            conn.commit()
+
+    def reset_database(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("DROP TABLE IF EXISTS users")
+            conn.commit()
+        self._init_db()

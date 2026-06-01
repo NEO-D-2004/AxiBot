@@ -6,6 +6,9 @@ class ModerationFilter:
         # Add common abusive words here (keeping it safe for this example)
         "idiot", "stupid", "hate"
     }
+    TIMEOUT_DURATION = 300
+    ENABLE_TIMEOUT = True
+    ENABLE_DELETE = True
 
     @classmethod
     def check_message(cls, message: str) -> bool:

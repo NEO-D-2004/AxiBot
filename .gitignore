@@ -5,12 +5,17 @@ __pycache__/
 venv/
 .env
 
-# YouTube API
+# YouTube API & Tokens
 client_secret.json
 token.json
-storage/token.json
-storage/cache.json
-.storage/cache.json
+storage/*.json
+storage/*.db
+.storage/
+
+# Build & Compilation
+build/
+dist/
+*.spec
 
 # Streamlabs
 socket_token.txt

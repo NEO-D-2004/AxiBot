@@ -1,106 +1,104 @@
-# 🤖 AxiBot - AI YouTube Moderator
+# 🤖 AxiBot - AI YouTube Moderator & Live Assistant
 
-AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by **Nvidia Open-Source Models API** (e.g., Google Gemma 3). It moderates chat, welcomes subscribers, engages viewers, and manages stream goals just like a human moderator—all optimized for minimal YouTube API usage and blazing fast inference.
+AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by the **Nvidia NIM Inference API** (e.g., Google Gemma 3). It moderates chat, welcomes subscribers, engages viewers, and manages stream goals just like a human moderator—all optimized for minimal YouTube API usage and blazing-fast inference.
+
+It features a premium glassmorphic desktop GUI dashboard built with PyWebView for easy configuration, visual log streaming, database management, and engine control.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Python](https://img.shields.io/badge/python-3.10+-blue.svg) ![AI API](https://img.shields.io/badge/AI-Nvidia_NIM-green.svg)
 
+---
+
 ## ✨ Features
 
-- **🧠 High-Performance Intelligence**: Uses NVIDIA's NIM API to run top-tier open-source models (like Gemma 3 or Gemma 2) with extremely low latency.
-- **💾 Iterative User Memory (SQLite)**: 
-    - **Long-term Recognition**: Stores a unique personality summary for every viewer in a local SQLite database (`storage/axibot.db`).
-    - **Cumulative Learning**: Every 6 messages, it merges new conversation details with existing memories, building a deeper understanding of each viewer over time.
-    - **Self-Awareness**: Viewers can ask "Who am I?" or "Tell about me" to hear what the bot knows about them.
-- **🗣️ Smart Context & Interaction**: 
-    - **Strict Doubt Filtering**: Only intervenes if it detects a clear question, a doubt, or a request for help—ignoring casual chatter and greetings.
-    - **1:1 Language Matching**: Detects English, Tamil, or Tanglish and replies in the **exact same language**. No forced Tamil for English speakers.
-    - **Pro-Gamer Persona**: Adopt a friendly, informal "pro-gamer" moderator friend vibe with emotional empathy (happy for wins, supportive for losses).
-- **🎯 Auto-Updating Goals**:
-    - **Like Target**: Automatically sets a goal (starts at 10). When hit, it celebrates and sets the next goal (+10).
-    - **Subscriber Target**: Tracks milestones and celebrates new sub goals (+10).
-- **📣 Smart Engagement**:
-    - **Dynamic Hype**: Generates unique, low-emoji "Like & Subscribe" reminders using AI.
-    - **Spike Detection**: Welcomes new viewers when traffic spikes (threshold: 8).
-- **🛡️ Auto-Moderation**: Instantly deletes abusive messages and timeouts users.
-- **⚡ Optimized Quota**: Smart polling allows for **8.5+ hours** of continuous streaming on the free YouTube quota.
+- **🖥️ Desktop GUI Dashboard**: A premium dark-themed interface to monitor bot status, live viewer metrics, likes goals, subscriber counts, and real-time captured console logs.
+- **🧠 High-Performance Intelligence**: Integrates NVIDIA NIM API to run top-tier open-source LLMs (like Google Gemma 3 or Llama 3) with extremely low response latency.
+- **👥 Dual YouTube Account Support**: 
+  - **Streamer Account**: Links the streamer's channel via OAuth to automatically register `STREAMER_CHANNEL_ID` and sync live chat data.
+  - **Bot Account**: Links a secondary bot account (saved to `storage/token.json`) that polls live chat and replies to viewer messages.
+- **💾 Viewer Memory Database Manager**:
+  - View, search, edit, or delete viewer logs from the local SQLite database (`storage/axibot.db`) directly through a graphic Database Manager tab.
+  - Automatically builds and updates 1-sentence viewer personality profiles based on historical chat records.
+- **🛡️ Custom Automated Moderation**: Define timed banned terms and toggle automated viewer timeouts or message deletions.
+- **📣 Engagement Triggers**: Setup custom periodic announcements, milestone goals, and welcome alerts during traffic spikes.
+- **⚡ Fast, Quota-Optimized Polling**: Adaptive polling (3s when active, 8s when idle) delivers near-instant reactions while allowing for **8+ hours** of streaming on a free YouTube API quota.
 
 ---
 
 ## 🛠️ Prerequisites
 
-1.  **Python 3.10+**: [Download Here](https://www.python.org/downloads/)
-2.  **Nvidia API Key**: [Get Key Here](https://build.nvidia.com/) (Required for AI generation)
+1. **Python 3.10+**: [Download Python](https://www.python.org/downloads/)
+2. **Nvidia API Key**: [Get Key from NVIDIA Build](https://build.nvidia.com/) (Required for LLM reply generation)
+3. **Google API Credentials**: Download client secrets for Desktop Application authentication.
 
 ---
 
 ## 📥 Installation
 
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/yourusername/axibot.git
-    cd axibot
-    ```
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/yourusername/axibot.git
+   cd axibot
+   ```
 
-2.  **Install Dependencies**
-    ```bash
-    pip install -r requirements.txt
-    ```
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ---
 
-## 🔑 Configuration (.env)
+## 🔑 Configuration & OAuth Setup
 
-1.  **Create `.env` file**
-    Copy the example file:
-    ```bash
-    cp .env.example .env
-    ```
+AxiBot requires two separate credentials paths in your `.env` configuration file.
 
-2.  **Get YouTube Credentials**
-    - Go to **[Google Cloud Console](https://console.cloud.google.com/)**.
-    - Create a New Project & Enable **YouTube Data API v3**.
-    - Create **OAuth client ID** (Desktop App).
-    - Download JSON as `client_secret.json`.
+1. **Get YouTube OAuth Credentials**
+   - Go to the **[Google Cloud Console](https://console.cloud.google.com/)**.
+   - Create a project and enable the **YouTube Data API v3**.
+   - Navigate to **API & Services** &rarr; **Credentials** &rarr; **Create Credentials** &rarr; **OAuth client ID** (Application type: Desktop App).
+   - Download the JSON configuration and save it as `client_secret.json` in the project root.
 
-3.  **Edit `.env`**
-    ```ini
-    YOUTUBE_CLIENT_SECRET_PATH=client_secret.json
-    YOUTUBE_TOKEN_PATH=storage/token.json
-    STREAMER_CHANNEL_ID=UCxxxxxxxxxxxxxxxxx
-    BOT_NAME=AxiBot
-    NVIDIA_API_KEY=your_nvidia_api_key_here
-    NVIDIA_MODEL_ID=google/gemma-3n-e2b-it
-    ```
+2. **Create `.env` file**
+   ```ini
+   YOUTUBE_CLIENT_SECRET_PATH=client_secret.json
+   YOUTUBE_TOKEN_PATH=storage/token.json
+   YOUTUBE_STREAMER_TOKEN_PATH=storage/streamer_token.json
+   STREAMER_CHANNEL_ID=
+   BOT_NAME=AxiBot
+   NVIDIA_API_KEY=your_nvidia_api_key_here
+   NVIDIA_MODEL_ID=google/gemma-3n-e2b-it
+   COOLDOWN_SECONDS=60
+   ```
+
+---
+
+## 🚨 CRITICAL RULE: Make Bot Account a Moderator
+
+To allow AxiBot to perform moderation actions (deleting spam comments, timing out viewers, banning trolls):
+**You MUST make the Bot Account a Moderator on the Streamer's YouTube Channel.**
+
+1. Visit the [YouTube Creator Studio](https://studio.youtube.com/) of the Streamer account.
+2. Go to **Settings** &rarr; **Community** &rarr; **Automated Filters**.
+3. Under the **Managing Moderators** section, paste the YouTube Channel URL of your Bot Account.
+4. Save the changes.
 
 ---
 
 ## 🚀 How to Run
 
-1.  **Start the Bot**
-    ```powershell
-    python app/main.py
-    ```
+### Run from Source
+1. **Start the Desktop GUI**
+   ```bash
+   python main_gui.py
+   ```
+2. **First-Launch Guide**: A setup popup will guide you through connecting your YouTube accounts, entering API keys, and setting permissions.
+3. **Connect Accounts**:
+   - Click **Get Started** to log in to the YouTube Streamer Account (auto-detects channel ID).
+   - In Settings, click **Link Bot Account** to authenticate the Bot Account.
+4. **Go Live**: Head to the dashboard and click **Start Bot Engine**.
 
-2.  **First Time Login**
-    - A browser window will open. Log in with the account you want the bot to speak from.
-    - If you see "Unsafe App", click **Advanced -> Go to (Project) -> Allow**.
-
-3.  **You're Live!**
-    - The bot will detect your active stream.
-    - It will automatically greet viewers and start monitoring chat.
-
----
-
-## 📝 Customization
-
-- **Bad Words**: Edit `app/moderation_filter.py`.
-- **Engagement Settings**: Edit `app/engagement.py` to change message frequency or target increments.
-- **AI Personality**: Edit prompt templates in `app/nvidia_client.py`.
-
----
-
-## ❓ Troubleshooting
-
-- **"Quota Exceeded"**: The bot is optimized for ~8.5 hours. If you stream longer, create a second project/credential.
-- **"401 Unauthorized" or API Key Errors**: Ensure your `NVIDIA_API_KEY` is correct in `.env`.
-- **Bot replying to itself**: Ensure `BOT_NAME` in `.env` matches the bot's display name exactly.
+### Compile and Build Standalone Executable
+You can bundle the Python application into a single executable folder for distribution:
+```bash
+python build.py
+```
+This cleans the workspace and compiles the executable at `dist/AxiBot/AxiBot.exe`. Make sure `client_secret.json` and `.env` are present in the same folder as the binary when launching.

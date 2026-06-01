@@ -12,7 +12,7 @@ class MessageRouter:
         self.db = DatabaseManager()
         self.bot_name = settings.BOT_NAME.lower()
         self.cooldowns = {}
-        self.COOLDOWN_SECONDS = 60
+        self.COOLDOWN_SECONDS = getattr(settings, 'COOLDOWN_SECONDS', 60)
         self.chat_history = collections.deque(maxlen=15)
         
         # Per-user recent history for summarization (10 messages trigger)
@@ -50,7 +50,8 @@ class MessageRouter:
                 reply = await self.gemini_client.generate_reply(user, prompt)
                 
                 if reply and "IGNORE_CHAT" not in reply:
-                    self.youtube_client.send_message(reply)
+                    mention_reply = reply if reply.startswith("@") else f"@{user} {reply}"
+                    self.youtube_client.send_message(mention_reply)
             return
 
         # 2. Normal Chat Handling
@@ -75,9 +76,10 @@ class MessageRouter:
         if ModerationFilter.check_message(message):
             print(f"[Moderation] Abusive message detected from {user}: {message}")
             if self.youtube_client:
-                if user_id:
-                    self.youtube_client.timeout_user(user_id, duration_seconds=300)
-                if message_id:
+                if user_id and getattr(ModerationFilter, 'ENABLE_TIMEOUT', True):
+                    dur = getattr(ModerationFilter, 'TIMEOUT_DURATION', 300)
+                    self.youtube_client.timeout_user(user_id, duration_seconds=dur)
+                if message_id and getattr(ModerationFilter, 'ENABLE_DELETE', True):
                     self.youtube_client.delete_message(message_id)
             return
 
@@ -132,13 +134,14 @@ class MessageRouter:
                     print(f"Bot wanted to reply, but {user} is on cooldown. Skipping to avoid spam.")
                     return
 
-                print(f"Bot Context-Aware Reply: {reply}")
+                mention_reply = reply if reply.startswith("@") else f"@{user} {reply}"
+                print(f"Bot Context-Aware Reply: {mention_reply}")
                 
                 # Append bot output to memory
-                self.chat_history.append(f"{self.bot_name}: {reply}")
+                self.chat_history.append(f"{self.bot_name}: {mention_reply}")
 
                 if self.youtube_client:
-                    self.youtube_client.send_message(reply)
+                    self.youtube_client.send_message(mention_reply)
                 else:
                     print("YouTube Client not connected, cannot send reply.")
             else:

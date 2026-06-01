@@ -28,7 +28,7 @@ async def main():
             chat_id = youtube.get_live_chat_id_for_channel(settings.STREAMER_CHANNEL_ID)
             if chat_id:
                 print(f"Connected to Live Chat ID: {chat_id}")
-                youtube.send_message("Hey Viewers Now Iam active you can chat with me by mentioning me...")
+                youtube.send_message("Hello viewers! 🤖 AxiBot is now active and monitoring the chat. Mention me to talk!")
                 
                 # Fetch Stream Context for AI
                 if youtube.video_id:

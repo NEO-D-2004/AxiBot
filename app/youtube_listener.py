@@ -18,8 +18,8 @@ class YouTubeChatListener:
         self.processed_ids = deque(maxlen=200)
         
         # Adaptive Polling Settings
-        self.min_poll_interval = 30   # Active chat (30s = ~8.6 hours runtime)
-        self.max_poll_interval = 60  # Idle chat
+        self.min_poll_interval = 3   # Active chat (3s = ~8.3 hours runtime)
+        self.max_poll_interval = 8   # Idle chat
         self.current_poll_interval = self.min_poll_interval
         self.idle_loops = 0
         self.IDLE_THRESHOLD = 3      # Loops without messages before slowing down

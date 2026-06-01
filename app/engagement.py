@@ -2,6 +2,8 @@ import random
 import time
 from collections import deque
 import asyncio
+import json
+import os
 
 class EngagementManager:
     def __init__(self, llm_client=None):
@@ -13,24 +15,45 @@ class EngagementManager:
             "New here? Say hi in the chat!",
             "If you are enjoying the content, please like and subscribe! It helps a lot!"
         ]
+        self.min_interval = 300
+        self.max_interval = 900
+        self.viewer_spike_threshold = 8
+        self.like_target_step = 10
+        self.like_target = 10
+
+        self.load_settings()
+
         self.last_message_time = 0
         self.next_message_time = 0 
-        self.message_history = deque(maxlen=len(self.fallback_messages))
+        self.message_history = deque(maxlen=max(1, len(self.fallback_messages)))
         
         # Viewer tracking
         self.last_viewer_count = 0
-        self.viewer_spike_threshold = 8
         
         # Target Tracking
-        self.like_target = 10
         self.sub_target = None # Will be set to current + 10 on first check
         
         self.categories = ["like_subscribe", "likes_target", "chat_with_me"]
         self._set_next_interval()
 
+    def load_settings(self):
+        path = "storage/engagement.json"
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+                    self.fallback_messages = data.get("fallback_messages", self.fallback_messages)
+                    self.min_interval = int(data.get("min_interval", self.min_interval))
+                    self.max_interval = int(data.get("max_interval", self.max_interval))
+                    self.viewer_spike_threshold = int(data.get("viewer_spike_threshold", self.viewer_spike_threshold))
+                    self.like_target_step = int(data.get("like_target_step", self.like_target_step))
+                    self.like_target = int(data.get("like_target", self.like_target))
+            except Exception as e:
+                print(f"Error loading engagement settings: {e}")
+
     def _set_next_interval(self):
-        # Random interval between 5 and 15 minutes
-        interval = random.randint(300, 900)
+        # Random interval between min_interval and max_interval
+        interval = random.randint(self.min_interval, self.max_interval)
         self.next_message_time = time.time() + interval
         # print(f"Next engagement message in {interval}s")
 
@@ -86,7 +109,7 @@ class EngagementManager:
             print(f"Like Target Reached! {current_likes} >= {self.like_target}")
             # Generate celebration message
             old_target = self.like_target
-            self.like_target += 10
+            self.like_target += self.like_target_step
             
             msg = await self._generate_message(category="like_target_met")
             if msg:

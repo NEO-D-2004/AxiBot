@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AxiBot Streaming Partner</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Animated Mesh Gradient Background -->
+  <div class="mesh-background"></div>
+
+  <!-- Main Container -->
+  <div class="app-container">
+
+    <!-- VIEW 1: LOGIN / CONNECTION SCREEN -->
+    <div id="login-view" class="view-panel fade-in">
+      <div class="glass-card login-card" id="tour-login-card">
+        <!-- Logo Header -->
+        <div class="logo-wrapper">
+          <img src="app-logo.svg" class="axibot-logo" alt="AxiBot Logo">
+          <span class="logo-text">AxiBot</span>
+        </div>
+        <p class="tagline">#Your AI Powered Streaming Partner</p>
+
+        <!-- Get Started Button (Triggers tour/auth) -->
+        <button id="btn-connect-youtube" class="btn btn-connect">
+          <svg class="btn-icon youtube-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.107C19.52 3.5 12 3.5 12 3.5s-7.52 0-9.388.556a3.003 3.003 0 0 0-2.11 2.107C0 8.028 0 12 0 12s0 3.972.502 5.837a3.003 3.003 0 0 0 2.11 2.107C4.48 20.5 12 20.5 12 20.5s7.52 0 9.388-.556a3.003 3.003 0 0 0 2.11-2.107C24 15.972 24 12 24 12s0-3.972-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <span class="btn-text">Get Started</span>
+          <svg class="btn-icon trend-arrow" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="7" y1="17" x2="17" y2="7"></line>
+            <polyline points="7 7 17 7 17 17"></polyline>
+          </svg>
+        </button>
+
+        <p class="auth-status-text" id="auth-status-desc">Loading authentication status...</p>
+      </div>
+    </div>
+
+    <!-- VIEW 2: DASHBOARD SCREEN -->
+    <div id="dashboard-view" class="view-panel hidden fade-in">
+      <div class="dashboard-layout">
+        
+        <!-- Left Sidebar Navigation -->
+        <aside class="glass-sidebar">
+          <div class="sidebar-top">
+            <div class="sidebar-header">
+              <img src="app-logo.svg" class="sidebar-logo" alt="AxiBot Logo">
+              <span class="sidebar-title">AxiBot</span>
+            </div>
+
+            <nav class="sidebar-nav">
+              <button class="nav-item active" data-tab="tab-dashboard" id="nav-dashboard">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                <span>Dashboard</span>
+              </button>
+              <button class="nav-item" data-tab="tab-moderation" id="nav-moderation">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                <span>Moderation</span>
+              </button>
+              <button class="nav-item" data-tab="tab-engagement" id="nav-engagement">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                <span>Engagement</span>
+              </button>
+              <button class="nav-item" data-tab="tab-viewers" id="nav-database">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span>Database</span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Sidebar Footer (Settings & Pill) -->
+          <div class="sidebar-footer">
+            <button class="nav-item settings-trigger-btn" data-tab="tab-settings" id="nav-settings">
+              <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              <span>Settings</span>
+            </button>
+            <button class="channel-name-pill" id="btn-sidebar-channel">
+              <span class="pill-dot"></span>
+              <span id="sidebar-channel-name">@ChannelNameHere</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Main Panel Content Area -->
+        <main class="main-content">
+          
+          <!-- TAB 1: DASHBOARD -->
+          <section id="tab-dashboard" class="tab-panel active">
+            <!-- Header Row -->
+            <header class="panel-header">
+              <div>
+                <h1 class="panel-title">Bot Dashboard</h1>
+                <p class="panel-subtitle">Manage and monitor your AI live stream assistant.</p>
+              </div>
+              <div class="header-controls">
+                <button id="btn-toggle-bot" class="btn btn-primary start-state">
+                  <span class="btn-pulse"></span>
+                  <span id="btn-toggle-bot-text">Start Bot Engine</span>
+                </button>
+              </div>
+            </header>
+
+            <!-- Quick Stats Grid -->
+            <div class="stats-grid">
+              <div class="glass-card stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Live Viewers</span>
+                  <svg class="stat-icon viewers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </div>
+                <div class="stat-value" id="stat-viewers">0</div>
+                <div class="stat-trend neutral">Streaming Realtime</div>
+              </div>
+
+              <div class="glass-card stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Stream Likes</span>
+                  <svg class="stat-icon likes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                </div>
+                <div class="stat-value" id="stat-likes">0</div>
+                <div class="stat-trend positive" id="stat-likes-trend">Goal: 10</div>
+              </div>
+
+              <div class="glass-card stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Subscribers</span>
+                  <svg class="stat-icon subs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                </div>
+                <div class="stat-value" id="stat-subs">0</div>
+                <div class="stat-trend neutral">Total Audience</div>
+              </div>
+
+              <div class="glass-card stat-card">
+                <div class="stat-header">
+                  <span class="stat-label">Replies Sent</span>
+                  <svg class="stat-icon messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div class="stat-value" id="stat-processed">0</div>
+                <div class="stat-trend positive">AI Engine Active</div>
+              </div>
+            </div>
+
+            <!-- Bot Live Logs Terminal -->
+            <div class="glass-card console-card" id="dashboard-console-card">
+              <div class="console-header">
+                <div class="console-title">
+                  <span class="pulse-indicator" id="bot-pulse"></span>
+                  <span>System Output Logs</span>
+                </div>
+                <div class="console-actions">
+                  <button id="btn-clear-logs" class="btn btn-small btn-secondary">Clear</button>
+                  <button id="btn-copy-logs" class="btn btn-small btn-secondary">Copy</button>
+                </div>
+              </div>
+              <div class="console-body" id="console-logs">
+                <div class="log-line system">[00:00:00] AxiBot GUI initialized. Ready to launch.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 2: BOT SETTINGS -->
+          <section id="tab-settings" class="tab-panel">
+            <header class="panel-header">
+              <div>
+                <h1 class="panel-title">Bot Configuration</h1>
+                <p class="panel-subtitle">Tweak fundamental parameters, API connection keys, and run states.</p>
+              </div>
+            </header>
+
+            <div class="settings-two-column-layout">
+              <div class="glass-card settings-card" id="settings-config-card">
+                <h2 class="section-title">Environment Variables</h2>
+                <form id="form-settings" class="settings-form">
+                  <div class="form-group">
+                    <label for="setting-bot-name">Bot Display Name</label>
+                    <input type="text" id="setting-bot-name" name="BOT_NAME" placeholder="AxiBot">
+                    <small class="form-help">The name the AI uses to identify itself in chat and ignore self-mentions.</small>
+                  </div>
+
+                  <input type="hidden" id="setting-channel-id-hidden" name="STREAMER_CHANNEL_ID">
+
+                  <div class="form-group">
+                    <label for="setting-api-key">NVIDIA API Key</label>
+                    <input type="password" id="setting-api-key" name="NVIDIA_API_KEY" placeholder="nvapi-...">
+                    <small class="form-help">Your integration key for the NVIDIA NIM Inference API.</small>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="setting-model-id">NVIDIA Model ID</label>
+                    <input type="text" id="setting-model-id" name="NVIDIA_MODEL_ID" placeholder="google/gemma-3n-e2b-it">
+                    <small class="form-help">The LLM model used for reply generations (e.g. google/gemma-3n-e2b-it or meta/llama-3.1-405b).</small>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="setting-cooldown">User Cooldown Timeout (Seconds)</label>
+                    <div class="range-wrapper">
+                      <input type="range" id="setting-cooldown" name="COOLDOWN_SECONDS" min="10" max="300" step="10" value="60">
+                      <span class="range-val" id="cooldown-val-display">60s</span>
+                    </div>
+                    <small class="form-help">Minimum wait time before the bot replies to the same user again, to avoid chat spamming.</small>
+                  </div>
+
+                  <div class="form-actions">
+                    <span class="save-status-msg" id="settings-save-status"></span>
+                    <button type="submit" class="btn btn-primary">Save Configuration</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="settings-sidebar-cards" style="display: flex; flex-direction: column; gap: 25px; width: 100%;">
+                <div class="glass-card settings-card" id="settings-accounts-card" style="width: 100%;">
+                  <h2 class="section-title">YouTube Connections</h2>
+                  <p class="control-description">AxiBot requires two YouTube accounts: one for the Streamer's channel and one for the Bot account that posts replies.</p>
+                  
+                  <!-- Streamer Connection Group -->
+                  <div class="account-connection-group" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                      <span class="control-description" style="font-weight: 600; color: #fff; margin: 0;">1. Streamer Channel</span>
+                      <span id="status-streamer-badge" class="badge" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Disconnected</span>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                      <input type="text" id="setting-channel-id" placeholder="Linked automatically via OAuth" readonly style="background: rgba(255, 255, 255, 0.02); border-color: rgba(255, 255, 255, 0.05); color: var(--text-muted); cursor: not-allowed; font-size: 12px; height: 36px; width: 100%; border-radius: 6px; padding: 0 10px;">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                      <button type="button" id="btn-link-streamer" class="btn btn-primary btn-small" style="flex-grow: 1; font-size: 12px; margin: 0; padding: 8px 12px;">Link Streamer</button>
+                      <button type="button" id="btn-unlink-streamer" class="btn btn-secondary btn-small" style="font-size: 12px; margin: 0; padding: 8px 12px;">Disconnect</button>
+                    </div>
+                  </div>
+
+                  <!-- Bot Connection Group -->
+                  <div class="account-connection-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                      <span class="control-description" style="font-weight: 600; color: #fff; margin: 0;">2. Bot Account</span>
+                      <span id="status-bot-badge" class="badge" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Disconnected</span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                      <button type="button" id="btn-link-bot" class="btn btn-primary btn-small" style="flex-grow: 1; font-size: 12px; margin: 0; padding: 8px 12px;">Link Bot Account</button>
+                      <button type="button" id="btn-unlink-bot" class="btn btn-secondary btn-small" style="font-size: 12px; margin: 0; padding: 8px 12px;">Disconnect</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="glass-card settings-card" id="settings-control-card" style="width: 100%;">
+                  <h2 class="section-title">Engine Run Control</h2>
+                  <p class="control-description">Manage the background connection state of the bot. Restarting is useful when you have updated environment keys.</p>
+                  <div class="engine-control-actions">
+                    <button id="btn-settings-start" class="btn btn-control-start">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5 3 19 12 5 21"></polygon></svg>
+                      Start Bot
+                    </button>
+                    <button id="btn-settings-stop" class="btn btn-control-stop">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+                      Stop Bot
+                    </button>
+                    <button id="btn-settings-restart" class="btn btn-control-restart">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                      Restart Bot
+                    </button>
+                  </div>
+                  <div class="engine-status-panel">
+                    <div class="status-indicator-label">Current State:</div>
+                    <span class="engine-status-text status-stopped" id="settings-engine-status-text">Stopped</span>
+                  </div>
+                </div>
+
+                <div class="glass-card settings-card" id="settings-maintenance-card" style="width: 100%;">
+                  <h2 class="section-title">System Maintenance</h2>
+                  <p class="control-description">Clear cached livestream IDs or perform a complete wipe of the viewers SQLite database.</p>
+                  <div class="engine-control-actions">
+                    <button id="btn-clear-cache" class="btn btn-control-restart" style="background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.25);">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      Clear Stream Cache
+                    </button>
+                    <button id="btn-reset-db" class="btn btn-control-stop">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right:4px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                      Reset Viewers Database
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 3: MODERATION FILTER -->
+          <section id="tab-moderation" class="tab-panel">
+            <header class="panel-header">
+              <div>
+                <h1 class="panel-title">Moderation Settings</h1>
+                <p class="panel-subtitle">Manage banned terms and automate filters inside "moderation_filter.py".</p>
+              </div>
+            </header>
+
+            <div class="moderation-two-column-layout">
+              <div class="glass-card settings-card" id="moderation-rules-card">
+                <h2 class="section-title">Moderation Actions</h2>
+                <form id="form-moderation-actions" class="settings-form">
+                  <div class="toggle-group">
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="setting-enable-timeout" checked>
+                      <span class="toggle-slider"></span>
+                    </label>
+                    <div class="toggle-label-group">
+                      <span class="toggle-title">Temporary Timeout User</span>
+                      <small class="toggle-description">Timeout offending viewers from the stream chat when they post banned words.</small>
+                    </div>
+                  </div>
+
+                  <div class="form-group indent-level" id="timeout-duration-group">
+                    <label for="setting-timeout-duration">Timeout Duration (Seconds)</label>
+                    <input type="number" id="setting-timeout-duration" min="30" max="86400" value="300">
+                    <small class="form-help">Duration of the temporary ban (default is 300 seconds / 5 minutes).</small>
+                  </div>
+
+                  <div class="toggle-group">
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="setting-enable-delete" checked>
+                      <span class="toggle-slider"></span>
+                    </label>
+                    <div class="toggle-label-group">
+                      <span class="toggle-title">Delete Abusive Message</span>
+                      <small class="toggle-description">Instantly delete (retract) the matched message from the live stream chat log.</small>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <div class="glass-card settings-card" id="moderation-words-card">
+                <h2 class="section-title">Banned Word Filter</h2>
+                <div class="moderation-container">
+                  <div class="add-word-row">
+                    <input type="text" id="input-banned-word" placeholder="Enter word or phrase...">
+                    <button id="btn-add-word" class="btn btn-primary">Add Word</button>
+                  </div>
+
+                  <div class="banned-words-wrapper">
+                    <label>Active Banned Words List</label>
+                    <div class="banned-words-chips" id="banned-words-container">
+                      <!-- Loaded dynamically -->
+                    </div>
+                  </div>
+
+                  <div class="form-actions border-top">
+                    <span class="save-status-msg" id="moderation-save-status"></span>
+                    <button id="btn-save-moderation" class="btn btn-primary">Apply Changes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 4: ENGAGEMENT -->
+          <section id="tab-engagement" class="tab-panel">
+            <header class="panel-header">
+              <div>
+                <h1 class="panel-title">Engagement Settings</h1>
+                <p class="panel-subtitle">Control the periodic and event-triggered chat messages sent by AxiBot.</p>
+              </div>
+              <div class="header-controls">
+                <button id="btn-force-engagement" class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px;"><polygon points="6 3 20 12 6 21"></polygon></svg>
+                  Force Trigger Now
+                </button>
+              </div>
+            </header>
+
+            <div class="engagement-two-column-layout">
+              <div class="glass-card settings-card" id="engagement-triggers-card">
+                <h2 class="section-title">Trigger Timing & Targets</h2>
+                <form id="form-engagement-settings" class="settings-form">
+                  <div class="form-row">
+                    <div class="form-group col-6">
+                      <label for="setting-min-interval">Min Post Interval (Seconds)</label>
+                      <input type="number" id="setting-min-interval" min="10" max="3600" value="300">
+                      <small class="form-help">Minimum wait time between automated messages.</small>
+                    </div>
+                    <div class="form-group col-6">
+                      <label for="setting-max-interval">Max Post Interval (Seconds)</label>
+                      <input type="number" id="setting-max-interval" min="20" max="7200" value="900">
+                      <small class="form-help">Maximum wait time before a message is forced.</small>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="setting-spike-threshold">Viewer Spike Threshold (Count Increase)</label>
+                    <input type="number" id="setting-spike-threshold" min="1" max="100" value="8">
+                    <small class="form-help">Trigger a greeting prompt when viewer count surges by this number.</small>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group col-6">
+                      <label for="setting-like-target-step">Like Target Increment</label>
+                      <input type="number" id="setting-like-target-step" min="1" max="500" value="10">
+                      <small class="form-help">Increase the target milestone by this amount each time it's met.</small>
+                    </div>
+                    <div class="form-group col-6">
+                      <label for="setting-like-target">Current Like Target</label>
+                      <input type="number" id="setting-like-target" min="0" value="10">
+                      <small class="form-help">Active milestone goal (milestone triggers celebration message).</small>
+                    </div>
+                  </div>
+
+                  <div class="form-actions">
+                    <span class="save-status-msg" id="engagement-save-status"></span>
+                    <button type="submit" class="btn btn-primary" id="btn-save-engagement">Save Triggers</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="glass-card settings-card" id="engagement-messages-card">
+                <h2 class="section-title">Fallback Chat Messages</h2>
+                <p class="section-description">AxiBot selects randomly from these when the periodic timer fires and the LLM generation is unavailable.</p>
+                <div class="engagement-msgs-container">
+                  <div class="add-word-row">
+                    <input type="text" id="input-engagement-msg" placeholder="Enter greeting or reminder message...">
+                    <button id="btn-add-engagement-msg" class="btn btn-primary">Add Message</button>
+                  </div>
+                  <div class="engagement-list-wrapper">
+                    <div class="engagement-msgs-list" id="engagement-msgs-list">
+                      <!-- Populated dynamically -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 5: VIEWER DATABASE -->
+          <section id="tab-viewers" class="tab-panel">
+            <header class="panel-header">
+              <div>
+                <h1 class="panel-title">Viewer Database Manager</h1>
+                <p class="panel-subtitle">Manage viewer memory and message count logs saved inside "axibot.db".</p>
+              </div>
+              <div class="header-controls">
+                <input type="text" id="search-viewers" class="glass-input-small" placeholder="Search display name...">
+              </div>
+            </header>
+
+            <!-- Table Card -->
+            <div class="glass-card table-card" id="database-table-card">
+              <div class="table-wrapper">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Display Name</th>
+                      <th>Last Active</th>
+                      <th class="text-center">Chats</th>
+                      <th>AI Personality Memory Summary</th>
+                      <th class="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="viewer-table-body">
+                    <tr>
+                      <td colspan="5" class="text-center pad-all">No viewers tracked yet. Start the bot and receive chats to populate this database.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+        </main>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- VIEWER MEMORY FULL EDIT DIALOG (Glassmorphic Modal) -->
+  <div id="modal-edit-user" class="modal-overlay hidden">
+    <div class="glass-card modal-card animate-zoom">
+      <h2 class="modal-title">Edit Viewer Profile</h2>
+      <p class="modal-subtitle" id="edit-user-subtitle">User ID: </p>
+      
+      <input type="hidden" id="edit-user-id">
+      
+      <div class="form-group pad-top">
+        <label for="edit-user-display-name">Display Name</label>
+        <input type="text" id="edit-user-display-name" placeholder="User name">
+      </div>
+
+      <div class="form-group pad-top">
+        <label for="edit-user-message-count">Total Messages Contributed</label>
+        <input type="number" id="edit-user-message-count" min="0">
+      </div>
+
+      <div class="form-group pad-top">
+        <label for="edit-user-summary">AI Personality Memory Summary</label>
+        <textarea id="edit-user-summary" rows="4" maxlength="150" placeholder="Summarize who they are (under 150 characters)"></textarea>
+        <small class="form-help">This profile is injected into Gemini context when they query the bot about themselves.</small>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+        <button id="btn-save-modal" class="btn btn-primary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- FIRST-LAUNCH README GUIDE (Glassmorphic Modal) -->
+  <div id="readme-overlay" class="modal-overlay hidden" style="z-index: 20000;">
+    <div class="glass-card modal-card animate-zoom" style="max-width: 600px; max-height: 85vh; overflow-y: auto; text-align: left; padding: 25px;">
+      <h2 class="modal-title" style="font-size: 24px; color: #fff; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; text-transform: none; letter-spacing: 0;">AxiBot Live Setup Guide</h2>
+      <p class="modal-subtitle" style="margin-bottom: 20px; font-size: 13.5px; color: var(--text-muted);">Please read this guide to successfully link and run the AI streaming moderator.</p>
+      
+      <div style="font-size: 14px; line-height: 1.6; color: #e2e8f0; display: flex; flex-direction: column; gap: 15px;">
+        <div>
+          <h3 style="color: var(--primary-color); font-size: 15px; font-weight: 600; margin-bottom: 4px;">1. Connect Streamer Account</h3>
+          <p style="margin: 0; font-size: 13.5px;">Click the <strong>Get Started</strong> button on the login screen to authenticate your main YouTube Streamer Channel. This automatically registers your <code>STREAMER_CHANNEL_ID</code> to listen to the chat.</p>
+        </div>
+        
+        <div>
+          <h3 style="color: var(--primary-color); font-size: 15px; font-weight: 600; margin-bottom: 4px;">2. Link Bot Account (In Settings)</h3>
+          <p style="margin: 0; font-size: 13.5px;">AxiBot requires a separate Bot Account to post AI comments and moderate. Go to the Settings tab to authenticate your secondary Bot account.</p>
+        </div>
+        
+        <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); padding: 12px; border-radius: 6px; margin-top: 5px;">
+          <h3 style="color: #fb7185; font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            CRITICAL SETUP RULE: Assign Bot as Moderator
+          </h3>
+          <p style="margin: 0; font-size: 13px; color: #fda4af; line-height: 1.5;">
+            To enable automated moderation (such as deleting spam messages or timing out viewer channel accounts):
+            <br>
+            <strong>You MUST make the Bot Account a Moderator on the Streamer's YouTube Channel.</strong>
+          </p>
+          <ul style="margin: 6px 0 0 16px; padding: 0; font-size: 12.5px; color: #fda4af; list-style-type: disc;">
+            <li>Go to <a href="https://studio.youtube.com/" target="_blank" style="color: #f43f5e; text-decoration: underline;">YouTube Creator Studio</a>.</li>
+            <li>Select <strong>Settings</strong> &rarr; <strong>Community</strong> &rarr; <strong>Automated Filters</strong>.</li>
+            <li>Paste your Bot Channel's URL into the <strong>Managing Moderators</strong> field and save.</li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 style="color: var(--primary-color); font-size: 15px; font-weight: 600; margin-bottom: 4px;">4. Configure LLM Model & Key</h3>
+          <p style="margin: 0; font-size: 13.5px;">Add your Nvidia API key and click "Start Bot Engine" on the dashboard to go live!</p>
+        </div>
+      </div>
+      
+      <div style="display: flex; justify-content: flex-end; margin-top: 25px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 15px;">
+        <button id="btn-readme-done" class="btn btn-primary" style="padding: 10px 24px;">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING TOUR MODAL OVERLAY -->
+  <div id="tour-overlay" class="tour-overlay-backdrop hidden">
+    <div class="glass-card tour-card animate-zoom" id="tour-card-element">
+      <div class="tour-header">
+        <span class="tour-title">AxiBot Setup Guide</span>
+        <span class="tour-step-counter" id="tour-step-counter">Step 1 of 6</span>
+      </div>
+      <div class="tour-body">
+        <p id="tour-text">Welcome to AxiBot! Let's get you set up.</p>
+      </div>
+      <div class="tour-footer">
+        <button class="btn btn-secondary btn-small" id="btn-tour-skip">Skip Tour</button>
+        <button class="btn btn-primary btn-small" id="btn-tour-next">Next Step</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

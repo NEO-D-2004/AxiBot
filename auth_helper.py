@@ -10,19 +10,21 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.force-ssl"
 ]
 
-def authenticate_youtube():
+def authenticate_youtube(token_path=None):
     # Load settings from .env manually or via python-dotenv if available
     from dotenv import load_dotenv
     load_dotenv()
     
     client_secret_path = os.getenv("YOUTUBE_CLIENT_SECRET_PATH", "client_secret.json")
-    token_path = os.getenv("YOUTUBE_TOKEN_PATH", "storage/token.json")
+    if token_path is None:
+        token_path = os.getenv("YOUTUBE_TOKEN_PATH", "storage/token.json")
 
     # Check if client secret exists
     if not os.path.exists(client_secret_path):
-        print(f"Error: Client secret file not found at '{client_secret_path}'")
-        print("Please download your OAuth client ID JSON from Google Cloud Console and save it as 'client_secret.json' in the project root.")
-        return
+        raise FileNotFoundError(
+            f"Client secret file not found at '{os.path.abspath(client_secret_path)}'. "
+            "Please download your OAuth client ID JSON from Google Cloud Console and save it as 'client_secret.json' in the application folder."
+        )
 
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
