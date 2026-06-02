@@ -596,6 +596,22 @@ class WebAPI:
             print(f"Failed to reset database: {e}")
             return False
 
+    def check_tour_status(self):
+        """ Returns True if the onboarding tour has been marked completed on the backend """
+        return os.path.exists("storage/tour_done.txt")
+
+    def mark_tour_done(self):
+        """ Marks the onboarding tour as completed on the backend """
+        try:
+            os.makedirs("storage", exist_ok=True)
+            with open("storage/tour_done.txt", "w") as f:
+                f.write("true")
+            print("Onboarding tour marked as done on backend.")
+            return True
+        except Exception as e:
+            print(f"Error marking tour as done: {e}")
+            return False
+
 def start_asyncio_thread(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
@@ -619,11 +635,11 @@ if __name__ == "__main__":
         title="AxiBot Streaming Dashboard",
         url=ui_html,
         js_api=api,
-        width=1100,
-        height=720,
+        width=1920,
+        height=1080,
         resizable=True,
         background_color="#e5dbff"
     )
     
     # Run PyWebView main thread (blocking)
-    webview.start(debug=True)
+    webview.start(debug=False)

@@ -27,3 +27,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Packaging and Build Utilities
+build.py
+installer.iss
+README_INSTALL.txt

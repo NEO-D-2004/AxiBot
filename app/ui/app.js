@@ -113,15 +113,6 @@ async function initApp() {
     return;
   }
 
-  // 0. Check for first-time launch README guide popup
-  const isReadmeDone = localStorage.getItem('axibot_readme_done');
-  if (!isReadmeDone) {
-    const readmeOverlay = document.getElementById('readme-overlay');
-    if (readmeOverlay) {
-      readmeOverlay.classList.remove('hidden');
-    }
-  }
-
   // 1. Check if user is already authenticated
   await checkAuthAndSwitchView();
 
@@ -170,7 +161,7 @@ async function checkAuthAndSwitchView() {
       startPolling();
 
       // If streamer logged in successfully and tour is not done, auto-trigger tour starting in settings tab
-      const isTourDone = localStorage.getItem('axibot_tour_done');
+      const isTourDone = await window.pywebview.api.check_tour_status();
       if (!isTourDone && !tourActive) {
         switchTab('tab-settings');
         startTour();
@@ -244,17 +235,7 @@ function setupButtonListeners() {
     await executeYouTubeConnection();
   });
 
-  // README Done Button
-  const btnReadmeDone = document.getElementById('btn-readme-done');
-  if (btnReadmeDone) {
-    btnReadmeDone.addEventListener('click', () => {
-      const readmeOverlay = document.getElementById('readme-overlay');
-      if (readmeOverlay) {
-        readmeOverlay.classList.add('hidden');
-      }
-      localStorage.setItem('axibot_readme_done', 'true');
-    });
-  }
+
 
   // Sidebar Channel Name Pill -> Disconnect option
   const btnChannelPill = document.getElementById('btn-sidebar-channel');
@@ -1191,7 +1172,7 @@ function endTour(skipAuth = false) {
   document.getElementById('tour-overlay').classList.add('hidden');
   
   // Mark tour completed
-  localStorage.setItem('axibot_tour_done', 'true');
+  window.pywebview.api.mark_tour_done();
 }
 
 async function executeYouTubeConnection() {

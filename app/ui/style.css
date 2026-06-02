@@ -21,7 +21,7 @@
   --input-bg: rgba(255, 255, 255, 0.05);
   --input-border: 1px solid rgba(255, 255, 255, 0.12);
 
-  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', Roboto, sans-serif;
   --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -658,7 +658,7 @@ body {
 }
 
 .col-6 {
-  width: 50%;
+  flex: 1;
 }
 
 .form-group label {
