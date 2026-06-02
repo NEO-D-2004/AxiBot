@@ -25,6 +25,7 @@ def main():
         '--name=AxiBot',
         '--onedir',          # Produce a folder containing executable and DLLs (highly recommended for PyWebView stability)
         '--windowed',         # No console window
+        '--icon=app/ui/app-logo.ico',
         f'--add-data={ui_data_param}',
         '--noconfirm',
         '--clean'
