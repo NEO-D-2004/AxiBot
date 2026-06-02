@@ -24,35 +24,40 @@ AxiBot features a dark-themed glassmorphic desktop GUI dashboard built with PyWe
 
 ## Prerequisites
 
-1. **Python 3.10+**: Download and install from [Python.org](https://www.python.org/downloads/)
-2. **NVIDIA API Key**: Obtain a key from the [NVIDIA Build Console](https://build.nvidia.com/) (Required for LLM reply generation)
-3. **Google API Credentials**: Download client secrets for Desktop Application authentication.
+1. **NVIDIA API Key**: Obtain a key from the [NVIDIA Build Console](https://build.nvidia.com/) (Required for LLM reply generation).
+2. **Google API Credentials (Optional)**: If you run your own client secret for custom API limits.
 
 ---
 
-## Installation & Running from Source
+## Installation & Setup
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/yourusername/axibot.git
-   cd axibot
-   ```
+1. **Download the Setup Program**
+   - Head to the **Releases** section on the GitHub repository.
+   - Download the latest `AxiBotSetup.exe` installer file from the Assets section.
 
-2. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+2. **Run the Installer Wizard**
+   - Double-click the downloaded `AxiBotSetup.exe` to run the setup.
+   - Follow the steps in the wizard. It is recommended to check the option to **Create a desktop shortcut** before completing the installation.
+   - Upon finish, the application will automatically launch, and a quick-start guide text file will open in your default editor.
 
-3. **Start the Desktop GUI**
-   ```bash
-   python main_gui.py
-   ```
+3. **Get YouTube OAuth Credentials (Optional)**
+   - By default, AxiBot is ready to link. If you need higher API quota limits, you can download your own Google API client secrets.
+   - Follow the step-by-step instructions in the **Configuration & OAuth Setup** section below to obtain a `client_secret.json` file.
+   - Copy your `client_secret.json` file and paste it directly into the AxiBot installation directory:
+     `C:\Users\<YourUsername>\AppData\Local\Programs\AxiBot\` (or type `%LocalAppData%\Programs\AxiBot` in Windows Run dialog).
 
-4. **Connect Accounts**:
-   - Click **Get Started** to log in to the YouTube Streamer Account (auto-detects channel ID).
-   - In Settings, click **Link Bot Account** to authenticate the Bot Account.
-   - Go to the Settings tab in AxiBot and add your Nvidia API Key.
-5. **Go Live**: Head to the dashboard and click **Start Bot Engine**.
+4. **Link Your YouTube Accounts**
+   - Launch AxiBot from your Desktop or Start Menu shortcut.
+   - On the landing screen, click **Get Started** to authenticate your main YouTube Streamer Channel in your browser. This automatically configures AxiBot to listen to your stream's live chat.
+   - Once the dashboard loads, navigate to the **Settings** tab.
+   - Under the **YouTube Connections** section, click **Link Bot Account** to authenticate your secondary Bot account (the account that will post the AI comments).
+
+5. **Assign Bot as Moderator**
+   - To let the bot account perform actions (like timing out users or deleting spam), you **must** assign the Bot account as a moderator on the Streamer's YouTube Creator Studio (instructions in the section below).
+
+6. **Add NVIDIA API Key and Go Live**
+   - In the Settings tab, paste your **Nvidia API Key** (required for LLM reply generation).
+   - Go to the **Dashboard** and click **Start Bot Engine**. AxiBot is now active and monitoring your stream!
 
 ---
 
@@ -92,19 +97,7 @@ To allow AxiBot to perform moderation actions (deleting spam comments, timing ou
 
 ---
 
-## Packaging and Build Automation
 
-### Compile standalone directory
-To bundle the Python application into a single executable folder:
-```bash
-python build.py
-```
-This cleans the workspace and compiles the executable at `dist/AxiBot/AxiBot.exe`. Make sure `client_secret.json` and `.env` are present in the same folder as the binary when launching.
-
-### Generate Standalone Setup Installer (.exe)
-If Inno Setup is installed on your system, running `python build.py` will automatically compile a standalone setup installer wizard (`dist-installer/AxiBotSetup.exe`) that installs the application per-user without requiring administrative rights.
-
----
 
 ## Troubleshooting
 
