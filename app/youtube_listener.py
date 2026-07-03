@@ -23,6 +23,11 @@ class YouTubeChatListener:
         self.current_poll_interval = self.min_poll_interval
         self.idle_loops = 0
         self.IDLE_THRESHOLD = 3      # Loops without messages before slowing down
+        
+        # Subscriber Polling Cache
+        self.seen_subscribers = None
+        self.last_subscriber_check = 0
+        self.subscriber_check_interval = 60  # seconds
 
     async def start(self):
         """
@@ -42,6 +47,13 @@ class YouTubeChatListener:
             try:
                 # Poll for messages
                 await self._poll_messages()
+                
+                # Check for new subscribers within the same loop (every 60s)
+                loop = asyncio.get_running_loop()
+                now = loop.time()
+                if now - self.last_subscriber_check >= self.subscriber_check_interval:
+                    self.last_subscriber_check = now
+                    await self._check_subscribers()
                 
                 # Sleep for the current interval
                 await asyncio.sleep(self.current_poll_interval)
@@ -175,3 +187,38 @@ class YouTubeChatListener:
             return base_data
             
         return None
+
+    async def _check_subscribers(self):
+        """
+        Queries the latest channel subscribers and routes alerts for any newly added subscriber.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+            subscribers = await loop.run_in_executor(
+                None,
+                self.youtube_client.get_latest_subscribers
+            )
+            if not subscribers:
+                return
+
+            if self.seen_subscribers is None:
+                self.seen_subscribers = {sub['id'] for sub in subscribers}
+                print(f"[Subscriber Poller] Cache initialized with {len(self.seen_subscribers)} existing subscribers.")
+                return
+
+            for sub in subscribers:
+                sub_id = sub['id']
+                if sub_id not in self.seen_subscribers:
+                    self.seen_subscribers.add(sub_id)
+                    event_data = {
+                        "platform": "youtube",
+                        "type": "subscription",
+                        "user": sub['name'],
+                        "user_id": sub_id,
+                        "message": ""
+                    }
+                    print(f"[Subscriber Poller] New native subscriber detected: {sub['name']}!")
+                    if self.callback:
+                        await self.callback(event_data)
+        except Exception as e:
+            print(f"[Subscriber Poller] Check failed: {e}")

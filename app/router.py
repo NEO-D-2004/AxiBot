@@ -33,12 +33,14 @@ class MessageRouter:
         message_id = message_data.get('id')
         
         # 1. Alert Handling (Native YouTube)
-        if msg_type in ['superChat', 'superSticker', 'newSponsor', 'memberMilestone']:
+        if msg_type in ['superChat', 'superSticker', 'newSponsor', 'memberMilestone', 'subscription']:
             print(f"New Native Alert: {msg_type} from {user}")
             if self.gemini_client and self.youtube_client:
                 # Generate a custom welcome/thank you message
                 if msg_type == 'newSponsor':
                     prompt = "I just became a new channel member!"
+                elif msg_type == 'subscription':
+                    prompt = "I just subscribed to your YouTube channel!"
                 elif msg_type in ['superChat', 'superSticker']:
                     amount = message_data.get('amount', '')
                     prompt = f"I just sent a Super Chat/Sticker for {amount}!"

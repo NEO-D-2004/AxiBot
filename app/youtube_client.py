@@ -395,6 +395,47 @@ class YouTubeClient:
             print(f"Failed to fetch upcoming streams: {e}")
             return []
 
+    def get_streamer_client(self):
+        """
+        Authenticates and returns a YouTube service object using the Streamer credentials.
+        """
+        token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
+        if not os.path.exists(token_path):
+            return None
+        try:
+            creds = Credentials.from_authorized_user_file(token_path)
+            return build("youtube", "v3", credentials=creds)
+        except Exception as e:
+            print(f"YouTube Streamer Auth Error: {e}")
+            return None
+
+    def get_latest_subscribers(self, max_results=10):
+        """
+        Fetches the latest public subscribers of the streamer.
+        """
+        streamer_client = self.get_streamer_client()
+        if not streamer_client:
+            return []
+            
+        try:
+            request = streamer_client.subscriptions().list(
+                part="subscriberDetails",
+                mySubscribers=True,
+                maxResults=max_results
+            )
+            response = request.execute()
+            subscribers = []
+            for item in response.get("items", []):
+                details = item.get("subscriberDetails", {})
+                subscribers.append({
+                    "id": details.get("channelId"),
+                    "name": details.get("title", "Unknown User")
+                })
+            return subscribers
+        except Exception as e:
+            print(f"Failed to fetch latest subscribers: {e}")
+            return []
+
 if __name__ == "__main__":
     # Test standalone (Requires a valid live video ID)
     client = YouTubeClient()
