@@ -434,6 +434,16 @@ class YouTubeClient:
             return subscribers
         except Exception as e:
             print(f"Failed to fetch latest subscribers: {e}")
+            # If the token is invalid or has expired/revoked credentials (invalid_grant),
+            # remove the streamer token so the user can re-authenticate from the frontend.
+            if "invalid_grant" in str(e):
+                token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
+                if os.path.exists(token_path):
+                    try:
+                        os.remove(token_path)
+                        print(f"[YouTube Auth] Invalid streamer grant detected. Removed expired/revoked token at {token_path}.")
+                    except Exception as re:
+                        print(f"[YouTube Auth] Error removing invalid token: {re}")
             return []
 
 if __name__ == "__main__":

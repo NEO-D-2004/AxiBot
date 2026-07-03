@@ -1,0 +1,18 @@
+<project>
+  <tree>
+    <node name="src" type="folder">
+      <node name="extension.ts" type="file" />
+      <node name="parser.ts" type="file" />
+    </node>
+    <node name="media" type="folder">
+      <node name="icon.svg" type="file" />
+    </node>
+    <node name="README.md" type="file" />
+  </tree>
+  <table>
+    <row file="README.md" type="MD" size="4KB" />
+    <row file="src/extension.ts" type="TS" size="12KB" />
+    <row file="src/parser.ts" type="TS" size="8KB" />
+    <row file="media/icon.svg" type="SVG" size="2KB" />
+  </table>
+</project>

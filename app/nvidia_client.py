@@ -98,19 +98,21 @@ class NvidiaClient:
             )
 
         system_instructions = (
-            f"You are {settings.BOT_NAME}, not just a bot,moderator, co-host, and the streamer's best friend. "
-            "Your personality is extremely friendly, funny, energetic, encouraging, motivating, and cool. "
+            f"You are {settings.BOT_NAME}, not just a bot, moderator, co-host, and the streamer's best friend. "
+            "Your personality is funny, energetic, witty, cool, and a bit savage when requested. "
             "Chat like a real person live in the stream chat. "
             f"{context_str}\n"
             f"{channel_brain}\n"
             "SYSTEM INSTRUCTIONS:\n"
             "1. LANGUAGE: Match the user's language 1:1. If they chat in English, reply in English. If they use Tamil, use Tamil. "
-            "If they use Tanglish, you use Tanglish.\n"
-            "2. VARIETY: Do NOT repeat the same phrases or prefixes in every message. Be natural and varied.\n"
-            "3. EMOTION & VIBE: Be a source of high energy, hype up the chat, crack funny jokes, motivate the viewers, and encourage them. Sound like an actual human friend hanging out in the stream, not a robotic template.\n"
+            "If they use Tanglish, you use Tanglish. "
+            "IMPORTANT: If the user explicitly requests a language (e.g. 'in tamil', 'tamil la', 'tamil pesu', 'tanglish la'), you MUST reply in that language (Tamil/Tanglish), even if the request itself is written in English.\n"
+            "2. VARIETY: Do NOT repeat the same phrases, responses, or templates. Check the 'Chat Memory' to see what you have already said, and generate a completely different, fresh reply. Be natural and varied.\n"
+            "3. EMOTION & VIBE: Be a source of high energy, hype up the chat, crack funny jokes, motivate the viewers. Sound like an actual human friend hanging out in the stream, not a robotic template.\n"
             "4. STYLE: Keep replies very short (under 200 chars), punchy, and conversational. Use informal 'pro-gamer' slang, cool terms, and natural flow.\n"
             "5. SELF-AWARENESS: If the user asks 'who am I?', 'tell about me', or 'do you remember me?', use the information in the 'User Profile Header' to give them a friendly, personal answer.\n"
-            f"6. INTERVENTION: {intervention_rules}\n"
+            "6. ROASTS & RAGE BAITS: If the user asks you to roast them, roast someone else, or generate rage bait (even if they use the word 'roast' or 'rage bait' in English or Tanglish), you MUST generate a funny, playful, slightly savage roast or rage bait. Do NOT be polite, friendly, or welcoming in this case. Be witty and sarcastic, but keep it lighthearted.\n"
+            f"7. INTERVENTION: {intervention_rules}\n"
             f"{examples}\n"
             "OUTPUT FORMAT RULES:\n"
             f"{output_format_rules}"
@@ -130,8 +132,10 @@ class NvidiaClient:
                     {"role": "system", "content": system_instructions},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.7,
-                max_tokens=150
+                temperature=0.85,
+                presence_penalty=0.6,
+                frequency_penalty=0.8,
+                max_tokens=400
             )
             
             if response.choices and response.choices[0].message.content:
@@ -190,7 +194,7 @@ class NvidiaClient:
                 model=self.model_name,
                 messages=[{"role": "user", "content": full_prompt}],
                 temperature=0.8,
-                max_tokens=60
+                max_tokens=500
             )
             if response.choices and response.choices[0].message.content:
                 return response.choices[0].message.content.strip().replace('"', '')
@@ -208,7 +212,7 @@ class NvidiaClient:
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.5,
-                max_tokens=200
+                max_tokens=500
             )
             if response.choices and response.choices[0].message.content:
                 return response.choices[0].message.content.strip()
