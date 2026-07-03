@@ -50,7 +50,7 @@ class MessageRouter:
                 reply = await self.gemini_client.generate_reply(user, prompt)
                 
                 if reply and "IGNORE_CHAT" not in reply:
-                    mention_reply = reply if reply.startswith("@") else f"@{user} {reply}"
+                    mention_reply = self._format_mention(user, reply)
                     self.youtube_client.send_message(mention_reply)
             return
 
@@ -134,7 +134,7 @@ class MessageRouter:
                     print(f"Bot wanted to reply, but {user} is on cooldown. Skipping to avoid spam.")
                     return
 
-                mention_reply = reply if reply.startswith("@") else f"@{user} {reply}"
+                mention_reply = self._format_mention(user, reply)
                 print(f"Bot Context-Aware Reply: {mention_reply}")
                 
                 # Append bot output to memory
@@ -189,3 +189,26 @@ class MessageRouter:
         
         self.cooldowns[user] = now
         return False
+
+    def _format_mention(self, user: str, reply: str) -> str:
+        """
+        Formats a reply to ensure it begins with exactly one '@username' mention.
+        Handles cases where user already starts with '@', or the reply already includes the mention.
+        """
+        clean_user = user.lstrip("@").strip()
+        clean_reply = reply.strip()
+        
+        prefix_to_check = clean_user.lower()
+        reply_lower = clean_reply.lower()
+        
+        if reply_lower.startswith(f"@{prefix_to_check}"):
+            rest_of_reply = clean_reply[len(f"@{prefix_to_check}"):].strip()
+            return f"@{clean_user} {rest_of_reply}"
+        elif reply_lower.startswith(f"@ {prefix_to_check}"):
+            rest_of_reply = clean_reply[len(f"@ {prefix_to_check}"):].strip()
+            return f"@{clean_user} {rest_of_reply}"
+        elif reply_lower.startswith(prefix_to_check):
+            rest_of_reply = clean_reply[len(prefix_to_check):].strip()
+            return f"@{clean_user} {rest_of_reply}"
+        else:
+            return f"@{clean_user} {clean_reply}"

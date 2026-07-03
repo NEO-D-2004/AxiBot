@@ -17,7 +17,7 @@ let tourStep = 0;
 const tourSteps = [
   {
     targetId: 'settings-accounts-card',
-    text: "Step 1: YouTube Connections. Link your Bot account here. Since you connected your Streamer account, your Streamer Channel ID is registered automatically!",
+    text: "Step 1: YouTube Connections. Check your accounts. Only your Streamer Channel needs to be linked here. AxiBot uses a permanent pre-configured bot account for posting replies.",
     placement: 'left',
     tab: 'tab-settings'
   },

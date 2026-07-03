@@ -218,7 +218,7 @@
               <div class="settings-sidebar-cards" style="display: flex; flex-direction: column; gap: 25px; width: 100%;">
                 <div class="glass-card settings-card" id="settings-accounts-card" style="width: 100%;">
                   <h2 class="section-title">YouTube Connections</h2>
-                  <p class="control-description">AxiBot requires two YouTube accounts: one for the Streamer's channel and one for the Bot account that posts replies.</p>
+                  <p class="control-description">AxiBot uses a permanent pre-configured bot account for replies. You only need to link your Streamer Channel.</p>
                   
                   <!-- Streamer Connection Group -->
                   <div class="account-connection-group" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
@@ -237,13 +237,9 @@
 
                   <!-- Bot Connection Group -->
                   <div class="account-connection-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                      <span class="control-description" style="font-weight: 600; color: #fff; margin: 0;">2. Bot Account</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span class="control-description" style="font-weight: 600; color: #fff; margin: 0;">2. Bot Account (Permanent)</span>
                       <span id="status-bot-badge" class="badge" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Disconnected</span>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                      <button type="button" id="btn-link-bot" class="btn btn-primary btn-small" style="flex-grow: 1; font-size: 12px; margin: 0; padding: 8px 12px;">Link Bot Account</button>
-                      <button type="button" id="btn-unlink-bot" class="btn btn-secondary btn-small" style="font-size: 12px; margin: 0; padding: 8px 12px;">Disconnect</button>
                     </div>
                   </div>
                 </div>

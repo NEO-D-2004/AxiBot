@@ -103,10 +103,13 @@ class WebAPI:
 
     def connect_youtube(self, account_type="streamer"):
         """ Runs the YouTube authentication flow in the browser """
+        if account_type == "bot":
+            print("Cannot connect bot account: it is configured as permanent.")
+            return {"success": False, "error": "Bot account is permanent and pre-configured."}
         print(f"Starting YouTube OAuth Connection Flow for {account_type}...")
         try:
             from auth_helper import authenticate_youtube
-            token_path = settings.YOUTUBE_TOKEN_PATH if account_type == "bot" else settings.YOUTUBE_STREAMER_TOKEN_PATH
+            token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
             authenticate_youtube(token_path=token_path)
             success = os.path.exists(token_path)
             if success:
@@ -145,7 +148,10 @@ class WebAPI:
 
     def disconnect_youtube(self, account_type="streamer"):
         """ Removes the local token to disconnect YouTube for streamer or bot """
-        token_path = settings.YOUTUBE_TOKEN_PATH if account_type == "bot" else settings.YOUTUBE_STREAMER_TOKEN_PATH
+        if account_type == "bot":
+            print("Cannot disconnect bot account: it is configured as permanent.")
+            return False
+        token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
         if os.path.exists(token_path):
             os.remove(token_path)
             print(f"Disconnected YouTube {account_type} account. Token deleted.")
@@ -223,7 +229,7 @@ class WebAPI:
             return False
             
         if not self.check_bot_auth_status():
-            print("Cannot start: YouTube Bot Account is not linked. Please link it in Settings first.")
+            print("Cannot start: Pre-configured YouTube Bot Account token is missing from storage/token.json.")
             return False
 
         self.running = True
