@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     NVIDIA_MODEL_ID: str = "google/gemma-3n-e2b-it"  # Defaulting to gemma-3n-e2b-it
     BOT_NAME: str = "AxiBot"
     COOLDOWN_SECONDS: int = 60
+    ENABLE_DATABASE: bool = True
 
     class Config:
         env_file = ".env"

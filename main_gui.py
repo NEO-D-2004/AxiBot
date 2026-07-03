@@ -168,7 +168,8 @@ class WebAPI:
             "NVIDIA_MODEL_ID": os.getenv("NVIDIA_MODEL_ID", "google/gemma-3n-e2b-it"),
             "COOLDOWN_SECONDS": str(settings.COOLDOWN_SECONDS if hasattr(settings, 'COOLDOWN_SECONDS') else 60),
             "STREAMER_CONNECTED": self.check_streamer_auth_status(),
-            "BOT_CONNECTED": self.check_bot_auth_status()
+            "BOT_CONNECTED": self.check_bot_auth_status(),
+            "ENABLE_DATABASE": os.getenv("ENABLE_DATABASE", "True") == "True"
         }
 
     def save_settings(self, new_settings):
@@ -180,6 +181,8 @@ class WebAPI:
             settings.STREAMER_CHANNEL_ID = new_settings.get("STREAMER_CHANNEL_ID", settings.STREAMER_CHANNEL_ID)
             settings.NVIDIA_API_KEY = new_settings.get("NVIDIA_API_KEY", settings.NVIDIA_API_KEY)
             settings.NVIDIA_MODEL_ID = new_settings.get("NVIDIA_MODEL_ID", settings.NVIDIA_MODEL_ID)
+            if "ENABLE_DATABASE" in new_settings:
+                settings.ENABLE_DATABASE = new_settings.get("ENABLE_DATABASE") == "True"
             
             # Cooldown check
             cooldown_val = int(new_settings.get("COOLDOWN_SECONDS", 60))

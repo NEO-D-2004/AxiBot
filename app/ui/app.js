@@ -594,13 +594,15 @@ function setupFormListeners() {
       settingsObj[key] = value.trim();
     });
 
+    const enableDbCheckbox = document.getElementById('setting-enable-database');
+    if (enableDbCheckbox) {
+      settingsObj["ENABLE_DATABASE"] = enableDbCheckbox.checked ? "True" : "False";
+    }
+
     try {
       const success = await window.pywebview.api.save_settings(settingsObj);
       if (success) {
         settingsSaveStatus.innerText = "Settings saved successfully!";
-        // Reload handle representation
-        const sidebarChannel = document.getElementById('sidebar-channel-name');
-        sidebarChannel.innerText = `@${settingsObj.BOT_NAME || 'AxiBot'}`;
         setTimeout(() => { settingsSaveStatus.innerText = ""; }, 3000);
       } else {
         settingsSaveStatus.innerText = "Error: Check your configuration values.";
@@ -669,7 +671,6 @@ async function loadAllSettings() {
   try {
     const config = await window.pywebview.api.get_settings();
     
-    document.getElementById('setting-bot-name').value = config.BOT_NAME || "AxiBot";
     document.getElementById('setting-channel-id').value = config.STREAMER_CHANNEL_ID || "";
     
     const hiddenChInput = document.getElementById('setting-channel-id-hidden');
@@ -683,6 +684,11 @@ async function loadAllSettings() {
     const cooldownVal = parseInt(config.COOLDOWN_SECONDS || 60);
     document.getElementById('setting-cooldown').value = cooldownVal;
     document.getElementById('cooldown-val-display').innerText = `${cooldownVal}s`;
+
+    const enableDbCheckbox = document.getElementById('setting-enable-database');
+    if (enableDbCheckbox) {
+      enableDbCheckbox.checked = config.ENABLE_DATABASE !== false;
+    }
 
     // Render Streamer Connection Badge
     const statusStreamerBadge = document.getElementById('status-streamer-badge');

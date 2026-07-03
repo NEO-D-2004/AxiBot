@@ -98,7 +98,7 @@ class MessageRouter:
 
         # 2. Database Tracking & Memory Fetch
         user_memory = "New viewer, treat them with extra warmth!"
-        if user_id:
+        if getattr(settings, 'ENABLE_DATABASE', True) and user_id:
             # Update activity (last seen, count)
             self.db.update_user_activity(user_id, user)
             
