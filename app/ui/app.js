@@ -127,6 +127,46 @@ async function initApp() {
 
   // 5. Setup Search Filters
   setupSearchFilters();
+
+  // 6. Setup Custom Commands Manager handlers
+  setupCommandsForm();
+
+  // 7. Setup Highlights Log handlers
+  setupHighlightsControls();
+}
+
+function updateSidebarChannelPill(config) {
+  const sidebarChannel = document.getElementById('sidebar-channel-name');
+  const sidebarAvatar = document.getElementById('sidebar-channel-avatar');
+  const sidebarDot = document.getElementById('sidebar-channel-dot');
+  
+  if (!sidebarChannel) return;
+  
+  if (config && config.STREAMER_CHANNEL_NAME) {
+    sidebarChannel.innerText = config.STREAMER_CHANNEL_NAME;
+  } else if (config && config.STREAMER_CHANNEL_ID) {
+    sidebarChannel.innerText = config.STREAMER_CHANNEL_ID;
+  } else {
+    sidebarChannel.innerText = "AxiBot";
+  }
+  
+  if (config && config.STREAMER_AVATAR_URL) {
+    if (sidebarAvatar) {
+      sidebarAvatar.src = config.STREAMER_AVATAR_URL;
+      sidebarAvatar.classList.remove('hidden');
+    }
+    if (sidebarDot) {
+      sidebarDot.classList.add('hidden');
+    }
+  } else {
+    if (sidebarAvatar) {
+      sidebarAvatar.src = "";
+      sidebarAvatar.classList.add('hidden');
+    }
+    if (sidebarDot) {
+      sidebarDot.classList.remove('hidden');
+    }
+  }
 }
 
 /* 1. AUTHENTICATION & VIEW TRANSITIONS */
@@ -148,16 +188,12 @@ async function checkAuthAndSwitchView() {
       await loadModerationData();
       await loadEngagementData();
       await loadDbUsers();
+      await loadAllCommands();
+      await loadHighlights();
       
       // Update Streamer Handle pill at bottom
       const config = await window.pywebview.api.get_settings();
-      if (config && config.STREAMER_CHANNEL_NAME) {
-        sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_NAME}`;
-      } else if (config && config.STREAMER_CHANNEL_ID) {
-        sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_ID}`;
-      } else {
-        sidebarChannel.innerText = "@AxiBot";
-      }
+      updateSidebarChannelPill(config);
 
       // Start polling for stats and logs
       startPolling();
@@ -223,6 +259,10 @@ function switchTab(tabId) {
   // Trigger instant database reload if navigating to users
   if (tabId === 'tab-viewers') {
     loadDbUsers();
+  } else if (tabId === 'tab-commands') {
+    loadAllCommands();
+  } else if (tabId === 'tab-highlights') {
+    loadHighlights();
   }
 }
 
@@ -421,12 +461,13 @@ function setupButtonListeners() {
     const userId = document.getElementById('edit-user-id').value;
     const nameVal = document.getElementById('edit-user-display-name').value.trim();
     const countVal = document.getElementById('edit-user-message-count').value;
+    const pointsVal = document.getElementById('edit-user-points').value || 0;
     const summaryVal = document.getElementById('edit-user-summary').value.trim();
 
     if (userId && nameVal) {
       try {
         btnSaveModal.disabled = true;
-        const success = await window.pywebview.api.update_db_user(userId, nameVal, summaryVal, countVal);
+        const success = await window.pywebview.api.update_db_user(userId, nameVal, summaryVal, countVal, pointsVal);
         if (success) {
           modalEditUser.classList.add('hidden');
           await loadDbUsers();
@@ -508,16 +549,7 @@ function setupButtonListeners() {
           await loadAllSettings();
           // Update Streamer Handle pill at bottom
           const config = await window.pywebview.api.get_settings();
-          const sidebarChannel = document.getElementById('sidebar-channel-name');
-          if (sidebarChannel) {
-            if (config && config.STREAMER_CHANNEL_NAME) {
-              sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_NAME}`;
-            } else if (config && config.STREAMER_CHANNEL_ID) {
-              sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_ID}`;
-            } else {
-              sidebarChannel.innerText = "@AxiBot";
-            }
-          }
+          updateSidebarChannelPill(config);
           setTimeout(() => {
             if (settingsSaveStatus) settingsSaveStatus.innerText = "";
           }, 3000);
@@ -667,6 +699,20 @@ function setupFormListeners() {
     });
   }
 
+  // Commands toggle auto-save
+  const enableCmdsCheckbox = document.getElementById('setting-enable-commands');
+  if (enableCmdsCheckbox) {
+    enableCmdsCheckbox.addEventListener('change', async () => {
+      try {
+        const config = await window.pywebview.api.get_settings();
+        config["ENABLE_COMMANDS"] = enableCmdsCheckbox.checked ? "True" : "False";
+        await window.pywebview.api.save_settings(config);
+      } catch (err) {
+        console.error("Failed to auto-save commands status:", err);
+      }
+    });
+  }
+
   // Engagement Settings form
   const formEngagement = document.getElementById('form-engagement-settings');
   const engagementSaveStatus = document.getElementById('engagement-save-status');
@@ -752,6 +798,11 @@ async function loadAllSettings() {
     const enableDbCheckbox = document.getElementById('setting-enable-database');
     if (enableDbCheckbox) {
       enableDbCheckbox.checked = config.ENABLE_DATABASE !== false;
+    }
+
+    const enableCmdsCheckbox = document.getElementById('setting-enable-commands');
+    if (enableCmdsCheckbox) {
+      enableCmdsCheckbox.checked = config.ENABLE_COMMANDS !== false;
     }
 
     // Render Streamer Connection Badge
@@ -894,7 +945,7 @@ function renderViewerTable(filterQuery = "") {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center pad-all">No matching viewer records found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center pad-all">No matching viewer records found.</td></tr>`;
     return;
   }
 
@@ -914,10 +965,11 @@ function renderViewerTable(filterQuery = "") {
       <td class="viewer-name">${u.display_name || "Unknown"}</td>
       <td class="viewer-date">${lastSeenStr}</td>
       <td class="text-center viewer-count">${u.message_count || 0}</td>
+      <td class="text-center viewer-points">${u.points || 0}</td>
       <td class="viewer-summary" title="${u.personality_summary || ''}">${u.personality_summary || 'No memory recorded.'}</td>
       <td class="text-right">
         <div class="action-buttons-cell">
-          <button class="action-link btn-edit-summary" data-id="${u.user_id}" data-name="${u.display_name}" data-count="${u.message_count || 0}" data-summary="${u.personality_summary}">Edit</button>
+          <button class="action-link btn-edit-summary" data-id="${u.user_id}" data-name="${u.display_name}" data-count="${u.message_count || 0}" data-points="${u.points || 0}" data-summary="${u.personality_summary}">Edit</button>
           <button class="action-link delete btn-delete-user" data-id="${u.user_id}" data-name="${u.display_name}">Delete</button>
         </div>
       </td>
@@ -931,12 +983,14 @@ function renderViewerTable(filterQuery = "") {
       const uid = btn.getAttribute('data-id');
       const uname = btn.getAttribute('data-name');
       const ucount = btn.getAttribute('data-count');
+      const upts = btn.getAttribute('data-points') || 0;
       const usum = btn.getAttribute('data-summary');
 
       document.getElementById('edit-user-id').value = uid;
       document.getElementById('edit-user-subtitle').innerText = `User ID: ${uid}`;
       document.getElementById('edit-user-display-name').value = uname;
       document.getElementById('edit-user-message-count').value = ucount;
+      document.getElementById('edit-user-points').value = upts;
       document.getElementById('edit-user-summary').value = usum;
 
       document.getElementById('modal-edit-user').classList.remove('hidden');
@@ -1061,6 +1115,10 @@ function startPolling() {
   dbPoller = setInterval(async () => {
     if (currentActiveTab === 'tab-viewers') {
       await loadDbUsers();
+    } else if (currentActiveTab === 'tab-commands') {
+      await loadAllCommands();
+    } else if (currentActiveTab === 'tab-highlights') {
+      await loadHighlights();
     }
   }, 10000);
 }
@@ -1270,3 +1328,274 @@ window.addEventListener('resize', () => {
     positionTourCard(tourSteps[tourStep]);
   }
 });
+
+/* CUSTOM COMMANDS MANAGER HELPER FUNCTIONS */
+let localCommands = [];
+let editingCommandName = null;
+
+async function loadAllCommands() {
+  try {
+    localCommands = await window.pywebview.api.get_all_commands();
+    renderCommandsTable();
+  } catch (err) {
+    console.error("Error loading custom commands:", err);
+  }
+}
+
+function renderCommandsTable() {
+  const tbody = document.getElementById('commands-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (localCommands.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center pad-all">No custom commands created yet. Use the editor to add one.</td></tr>`;
+    return;
+  }
+
+  localCommands.forEach(cmd => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="viewer-name">!${cmd.command_name}</td>
+      <td class="viewer-summary">${cmd.response_text}</td>
+      <td class="text-center viewer-count">${cmd.use_count || 0}</td>
+      <td class="text-right">
+        <div class="action-buttons-cell">
+          <button class="action-link btn-edit-command" data-name="${cmd.command_name}" data-response="${cmd.response_text}">Edit</button>
+          <button class="action-link delete btn-delete-command" data-name="${cmd.command_name}">Delete</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Bind edit action
+  tbody.querySelectorAll('.btn-edit-command').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      const response = btn.getAttribute('data-response');
+
+      editingCommandName = name;
+      document.getElementById('command-editor-title').innerText = "Edit Command";
+      
+      const inputName = document.getElementById('input-command-name');
+      inputName.value = name;
+      inputName.disabled = true;
+
+      document.getElementById('input-command-response').value = response;
+      document.getElementById('modal-edit-command').classList.remove('hidden');
+    });
+  });
+
+  // Bind delete action
+  tbody.querySelectorAll('.btn-delete-command').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const name = btn.getAttribute('data-name');
+      if (confirm(`Are you sure you want to delete command !${name}?`)) {
+        try {
+          const success = await window.pywebview.api.delete_command(name);
+          if (success) {
+            await loadAllCommands();
+            if (editingCommandName === name) {
+              resetCommandEditor();
+            }
+          } else {
+            alert("Failed to delete command.");
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+  });
+}
+
+function resetCommandEditor() {
+  editingCommandName = null;
+  document.getElementById('command-editor-title').innerText = "Create New Command";
+  
+  const inputName = document.getElementById('input-command-name');
+  inputName.value = "";
+  inputName.disabled = false;
+
+  document.getElementById('input-command-response').value = "";
+  document.getElementById('modal-edit-command').classList.add('hidden');
+  document.getElementById('command-save-status').innerText = "";
+}
+
+function setupCommandsForm() {
+  const form = document.getElementById('form-command-editor');
+  if (!form) return;
+
+  const btnCreate = document.getElementById('btn-show-add-command-panel');
+  if (btnCreate) {
+    btnCreate.addEventListener('click', () => {
+      resetCommandEditor();
+      document.getElementById('modal-edit-command').classList.remove('hidden');
+    });
+  }
+
+  const btnCancel = document.getElementById('btn-cancel-command-edit');
+  if (btnCancel) {
+    btnCancel.addEventListener('click', () => {
+      resetCommandEditor();
+    });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const saveStatus = document.getElementById('command-save-status');
+    saveStatus.innerText = "Saving command...";
+
+    const nameInput = document.getElementById('input-command-name');
+    const nameVal = nameInput.value.trim().toLowerCase().replace(/^!/, "");
+    const responseVal = document.getElementById('input-command-response').value.trim();
+
+    if (!nameVal || !responseVal) {
+      saveStatus.innerText = "All fields required.";
+      return;
+    }
+
+    try {
+      const success = await window.pywebview.api.save_command(nameVal, responseVal);
+      if (success) {
+        saveStatus.innerText = "Command saved!";
+        resetCommandEditor();
+        await loadAllCommands();
+        setTimeout(() => { saveStatus.innerText = ""; }, 2500);
+      } else {
+        saveStatus.innerText = "Failed to save command.";
+      }
+    } catch (err) {
+      console.error(err);
+      saveStatus.innerText = "Error communicating with backend.";
+    }
+  });
+}
+
+/* HIGHLIGHTS LOG MANAGER HELPER FUNCTIONS */
+let localHighlights = [];
+
+async function loadHighlights() {
+  try {
+    localHighlights = await window.pywebview.api.get_highlights();
+    renderHighlightsTable();
+  } catch (err) {
+    console.error("Error loading highlights:", err);
+  }
+}
+
+function renderHighlightsTable() {
+  const tbody = document.getElementById('highlights-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (localHighlights.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center pad-all">No stream VOD clips marked yet. Viewers can type !clip in chat.</td></tr>`;
+    return;
+  }
+
+  localHighlights.forEach(hl => {
+    const row = document.createElement('tr');
+    
+    let localDateStr = hl.created_at || "";
+    if (hl.created_at) {
+      try {
+        const t = hl.created_at.split(/[- :]/);
+        const dateUtc = new Date(Date.UTC(t[0], t[1]-1, t[2], t[3]||0, t[4]||0, t[5]||0));
+        localDateStr = dateUtc.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " " + dateUtc.toLocaleDateString();
+      } catch (e) {
+        localDateStr = hl.created_at;
+      }
+    }
+
+    let streamUrl = "";
+    if (hl.video_id) {
+      streamUrl = `https://www.youtube.com/watch?v=${hl.video_id}&t=${hl.seconds_elapsed || 0}s`;
+    }
+
+    let offsetCell = "";
+    let copyLinkBtn = "";
+    if (streamUrl) {
+      offsetCell = `<a href="${streamUrl}" target="_blank" class="highlight-link" style="font-family: monospace; font-size: 14px; font-weight: bold; color: var(--text-accent); text-decoration: underline;" title="Watch highlight on YouTube VOD">[${hl.timestamp}]</a>`;
+      copyLinkBtn = `<button class="action-link btn-copy-highlight-link" data-url="${streamUrl}">Copy Link</button>`;
+    } else {
+      offsetCell = `<span style="font-family: monospace; font-size: 14px; font-weight: bold; color: var(--text-accent);">[${hl.timestamp}]</span>`;
+    }
+
+    row.innerHTML = `
+      <td class="viewer-name">${offsetCell}</td>
+      <td class="viewer-name">@${hl.user_trigger}</td>
+      <td class="viewer-summary" style="font-style: italic; opacity: 0.85;">${hl.message_text || "-"}</td>
+      <td class="viewer-name" style="font-size: 12px; opacity: 0.7;">${localDateStr}</td>
+      <td class="text-right">
+        <div class="action-buttons-cell">
+          ${copyLinkBtn}
+          <button class="action-link btn-copy-highlight" data-timestamp="${hl.timestamp}">Copy Stamp</button>
+          <button class="action-link delete btn-delete-highlight" data-id="${hl.id}">Delete</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Bind copy link actions
+  tbody.querySelectorAll('.btn-copy-highlight-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = btn.getAttribute('data-url');
+      navigator.clipboard.writeText(url);
+      const origText = btn.innerText;
+      btn.innerText = "Copied!";
+      setTimeout(() => { btn.innerText = origText; }, 1500);
+    });
+  });
+
+  // Bind copy timestamp actions
+  tbody.querySelectorAll('.btn-copy-highlight').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const stamp = btn.getAttribute('data-timestamp');
+      navigator.clipboard.writeText(stamp);
+      const origText = btn.innerText;
+      btn.innerText = "Copied!";
+      setTimeout(() => { btn.innerText = origText; }, 1500);
+    });
+  });
+
+  // Bind delete action
+  tbody.querySelectorAll('.btn-delete-highlight').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const highlightId = btn.getAttribute('data-id');
+      if (confirm(`Are you sure you want to delete this highlight entry?`)) {
+        try {
+          const success = await window.pywebview.api.delete_highlight(highlightId);
+          if (success) {
+            await loadHighlights();
+          } else {
+            alert("Failed to delete highlight.");
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+  });
+}
+
+function setupHighlightsControls() {
+  const btnClear = document.getElementById('btn-clear-highlights');
+  if (btnClear) {
+    btnClear.addEventListener('click', async () => {
+      if (confirm("Are you sure you want to clear all highlight VOD clips from the database? This cannot be undone.")) {
+        try {
+          const success = await window.pywebview.api.clear_highlights();
+          if (success) {
+            await loadHighlights();
+          } else {
+            alert("Failed to clear highlights log.");
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+  }
+}

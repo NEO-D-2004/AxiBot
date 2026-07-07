@@ -414,6 +414,19 @@ button {
   background: var(--white);
 }
 
+.channel-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.channel-avatar.hidden {
+  display: none;
+}
+
 /* Main content */
 .main-content {
   min-width: 0;
@@ -1574,5 +1587,68 @@ button {
 
 .btn-logout:active {
   transform: translateY(0);
+}
+
+/* Custom Commands Layout & Styles */
+.commands-two-column-layout {
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1180px) {
+  .commands-two-column-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.command-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.command-prefix-indicator {
+  position: absolute;
+  left: 14px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.command-input-wrapper input {
+  padding-left: 28px !important;
+}
+
+.action-buttons-cell {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.action-link {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+}
+
+.action-link:hover {
+  background: var(--surface-strong);
+}
+
+.action-link.delete {
+  color: #d90429;
+}
+
+.action-link.delete:hover {
+  background: rgba(217, 4, 41, 0.08);
 }
 

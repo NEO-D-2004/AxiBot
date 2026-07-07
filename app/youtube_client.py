@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime, timezone
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -12,6 +13,7 @@ class YouTubeClient:
         self.youtube = self._authenticate()
         self.live_chat_id = None
         self.video_id = None
+        self.stream_start_time = None
         self._ensure_storage_dir()
 
     def _ensure_storage_dir(self):
@@ -88,6 +90,14 @@ class YouTubeClient:
             if chat_id:
                 print(f"Found active live stream from cache: {cached_video_id}")
                 self.video_id = cached_video_id
+                
+                # Fetch video details to retrieve actual start time
+                details = self.get_video_details(cached_video_id)
+                if details and details.get("actual_start_time"):
+                    self.stream_start_time = details["actual_start_time"]
+                else:
+                    self.stream_start_time = datetime.now(timezone.utc).isoformat()
+                    
                 return chat_id
             else:
                 print("Cached stream ended or invalid. Performing full search...")
@@ -118,6 +128,13 @@ class YouTubeClient:
                 # Update Cache
                 self._save_cache({"video_id": video_id, "live_chat_id": chat_id})
                 self.video_id = video_id
+                
+                # Fetch video details to retrieve actual start time
+                details = self.get_video_details(video_id)
+                if details and details.get("actual_start_time"):
+                    self.stream_start_time = details["actual_start_time"]
+                else:
+                    self.stream_start_time = datetime.now(timezone.utc).isoformat()
                 
             return chat_id
             
@@ -180,23 +197,26 @@ class YouTubeClient:
 
     def get_video_details(self, video_id):
         """
-        Fetches the Title and Channel Name of the video/stream.
+        Fetches the Title, Channel Name, and actualStartTime of the video/stream.
         """
         if not self.youtube:
             return None
         
         try:
             request = self.youtube.videos().list(
-                part="snippet",
+                part="snippet,liveStreamingDetails",
                 id=video_id
             )
             response = request.execute()
             
             if response["items"]:
-                snippet = response["items"][0].get("snippet", {})
+                item = response["items"][0]
+                snippet = item.get("snippet", {})
+                live_details = item.get("liveStreamingDetails", {}) or {}
                 return {
                     "title": snippet.get("title"),
-                    "channel_title": snippet.get("channelTitle")
+                    "channel_title": snippet.get("channelTitle"),
+                    "actual_start_time": live_details.get("actualStartTime")
                 }
             return None
         except Exception as e:

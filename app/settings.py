@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     BOT_NAME: str = "AxiBot"
     COOLDOWN_SECONDS: int = 60
     ENABLE_DATABASE: bool = True
+    ENABLE_COMMANDS: bool = True
 
     class Config:
         env_file = ".env"
@@ -62,7 +63,8 @@ def save_local_settings():
         "NVIDIA_MODEL_ID": settings.NVIDIA_MODEL_ID,
         "BOT_NAME": settings.BOT_NAME,
         "COOLDOWN_SECONDS": settings.COOLDOWN_SECONDS,
-        "ENABLE_DATABASE": settings.ENABLE_DATABASE
+        "ENABLE_DATABASE": settings.ENABLE_DATABASE,
+        "ENABLE_COMMANDS": settings.ENABLE_COMMANDS
     }
     try:
         os.makedirs("storage", exist_ok=True)

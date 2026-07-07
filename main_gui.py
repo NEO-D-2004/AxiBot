@@ -234,11 +234,13 @@ class WebAPI:
         
         channel_name = settings.STREAMER_CHANNEL_NAME
         channel_id = settings.STREAMER_CHANNEL_ID
+        avatar_url = ""
         
         # Restore channel details from local cache if we are authenticated
         if self.check_streamer_auth_status():
             cached_data = self._get_cached_channel_data()
             if cached_data:
+                avatar_url = cached_data.get("avatar_url", "")
                 if not channel_name:
                     channel_name = cached_data.get("channel_name", "")
                     settings.STREAMER_CHANNEL_NAME = channel_name
@@ -255,6 +257,7 @@ class WebAPI:
                     cached_data = self._get_cached_channel_data()
                     channel_id = cached_data.get("channel_id", settings.STREAMER_CHANNEL_ID)
                     settings.STREAMER_CHANNEL_ID = channel_id
+                    avatar_url = cached_data.get("avatar_url", "")
             
             # If values were missing from memory but found in cache/API, persist them
             if channel_name != settings.STREAMER_CHANNEL_NAME or channel_id != settings.STREAMER_CHANNEL_ID:
@@ -265,6 +268,7 @@ class WebAPI:
                     "NVIDIA_MODEL_ID": settings.NVIDIA_MODEL_ID,
                     "COOLDOWN_SECONDS": str(settings.COOLDOWN_SECONDS),
                     "ENABLE_DATABASE": "True" if settings.ENABLE_DATABASE else "False",
+                    "ENABLE_COMMANDS": "True" if settings.ENABLE_COMMANDS else "False",
                     "STREAMER_CHANNEL_NAME": settings.STREAMER_CHANNEL_NAME
                 }
                 self.save_settings(current_config)
@@ -278,7 +282,9 @@ class WebAPI:
             "STREAMER_CONNECTED": self.check_streamer_auth_status(),
             "BOT_CONNECTED": self.check_bot_auth_status(),
             "ENABLE_DATABASE": settings.ENABLE_DATABASE,
-            "STREAMER_CHANNEL_NAME": settings.STREAMER_CHANNEL_NAME
+            "ENABLE_COMMANDS": settings.ENABLE_COMMANDS,
+            "STREAMER_CHANNEL_NAME": settings.STREAMER_CHANNEL_NAME,
+            "STREAMER_AVATAR_URL": avatar_url
         }
 
     def save_settings(self, new_settings):
@@ -292,6 +298,8 @@ class WebAPI:
             settings.NVIDIA_MODEL_ID = new_settings.get("NVIDIA_MODEL_ID", settings.NVIDIA_MODEL_ID)
             if "ENABLE_DATABASE" in new_settings:
                 settings.ENABLE_DATABASE = new_settings.get("ENABLE_DATABASE") == "True"
+            if "ENABLE_COMMANDS" in new_settings:
+                settings.ENABLE_COMMANDS = new_settings.get("ENABLE_COMMANDS") == "True"
             if "STREAMER_CHANNEL_NAME" in new_settings:
                 settings.STREAMER_CHANNEL_NAME = new_settings.get("STREAMER_CHANNEL_NAME", "")
             
@@ -690,14 +698,72 @@ class WebAPI:
             print(f"Error deleting user {user_id}: {e}")
             return False
 
-    def update_db_user(self, user_id, display_name, personality_summary, message_count):
+    def update_db_user(self, user_id, display_name, personality_summary, message_count, points=0):
         """ Updates details for a viewer in the database """
         try:
-            self.db.update_user_details(user_id, display_name, personality_summary, int(message_count))
+            self.db.update_user_details(user_id, display_name, personality_summary, int(message_count), int(points))
             print(f"Updated user details for {display_name} (ID: {user_id}).")
             return True
         except Exception as e:
             print(f"Error updating user details: {e}")
+            return False
+
+    def get_all_commands(self):
+        """ Returns all custom commands """
+        try:
+            cmds = self.db.get_all_commands()
+            return [dict(c) for c in cmds]
+        except Exception as e:
+            print(f"Error reading SQLite commands: {e}")
+            return []
+
+    def save_command(self, name, response):
+        """ Adds or edits a custom command """
+        try:
+            self.db.add_command(name, response)
+            print(f"Custom command !{name} saved successfully.")
+            return True
+        except Exception as e:
+            print(f"Error saving custom command: {e}")
+            return False
+
+    def delete_command(self, name):
+        """ Deletes a custom command """
+        try:
+            self.db.delete_command(name)
+            print(f"Custom command !{name} deleted successfully.")
+            return True
+        except Exception as e:
+            print(f"Error deleting custom command: {e}")
+            return False
+
+    def get_highlights(self):
+        """ Returns all stream highlights """
+        try:
+            hl = self.db.get_all_highlights()
+            return [dict(h) for h in hl]
+        except Exception as e:
+            print(f"Error reading SQLite highlights: {e}")
+            return []
+
+    def delete_highlight(self, highlight_id):
+        """ Deletes a specific highlight entry """
+        try:
+            self.db.delete_highlight(int(highlight_id))
+            print(f"Highlight entry ID {highlight_id} deleted successfully.")
+            return True
+        except Exception as e:
+            print(f"Error deleting highlight: {e}")
+            return False
+
+    def clear_highlights(self):
+        """ Clears all highlight log entries """
+        try:
+            self.db.clear_all_highlights()
+            print("All highlights logs cleared successfully.")
+            return True
+        except Exception as e:
+            print(f"Error clearing highlights: {e}")
             return False
 
     def clear_stream_cache(self):

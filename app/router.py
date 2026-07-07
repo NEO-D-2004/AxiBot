@@ -102,6 +102,9 @@ class MessageRouter:
             # Update activity (last seen, count)
             self.db.update_user_activity(user_id, user)
             
+            # Award points (10 AxiCoins per message)
+            self.db.add_points(user_id, user, 10)
+            
             # Fetch existing memory
             user_data = self.db.get_user(user_id)
             if user_data:
@@ -112,6 +115,90 @@ class MessageRouter:
             if len(self.user_session_history[user_id]) >= 10:
                 # Trigger background summarization
                 asyncio.create_task(self._summarize_user(user_id, user))
+
+        # Check for chat commands
+        if message.startswith("!") and getattr(settings, 'ENABLE_COMMANDS', True):
+            cmd_parts = message.split()
+            cmd_name = cmd_parts[0][1:].lower()
+            cmd_args = cmd_parts[1:]
+            
+            # 1. !axicoins
+            if cmd_name == "axicoins":
+                if user_id:
+                    user_data = self.db.get_user(user_id)
+                    pts = user_data["points"] if user_data else 0
+                    reply = f"@{user} you currently have {pts} AxiCoins!"
+                else:
+                    reply = f"@{user} could not retrieve your points balance."
+                if self.youtube_client:
+                    self.youtube_client.send_message(reply)
+                return
+            
+            # 2. !axileaderboard / !axitop
+            elif cmd_name in ["axileaderboard", "axitop"]:
+                top_users = self.db.get_top_users_by_points(3)
+                if top_users:
+                    rankings = []
+                    for idx, row in enumerate(top_users):
+                        rankings.append(f"{idx+1}. {row['display_name']} ({row['points']})")
+                    reply = f"🏆 AxiCoins Leaderboard: " + " | ".join(rankings)
+                else:
+                    reply = "🏆 AxiCoins Leaderboard: No users tracked yet."
+                if self.youtube_client:
+                    self.youtube_client.send_message(reply)
+                return
+            
+            # 3. !clip / !highlight
+            elif cmd_name in ["clip", "highlight"]:
+                from datetime import datetime, timezone
+                elapsed_seconds = 0
+                
+                start_time_str = getattr(self.youtube_client, 'stream_start_time', None)
+                if start_time_str:
+                    try:
+                        if start_time_str.endswith("Z"):
+                            start_time_str = start_time_str[:-1] + "+00:00"
+                        start_dt = datetime.fromisoformat(start_time_str)
+                        now_dt = datetime.now(timezone.utc)
+                        elapsed_seconds = int((now_dt - start_dt).total_seconds())
+                    except Exception as ex:
+                        print(f"Error parsing stream start time in router: {ex}")
+                
+                if elapsed_seconds <= 0:
+                    elapsed_seconds = 0
+                
+                # Format to HH:MM:SS
+                h = elapsed_seconds // 3600
+                m = (elapsed_seconds % 3600) // 60
+                s = elapsed_seconds % 60
+                timestamp_str = f"{h:02d}:{m:02d}:{s:02d}"
+                
+                context_msg = " ".join(cmd_args) if cmd_args else ""
+                
+                # Log to DB
+                video_id = getattr(self.youtube_client, 'video_id', None)
+                self.db.add_highlight(timestamp_str, elapsed_seconds, user, context_msg, video_id)
+                
+                reply = f"@{user} Added Clip at {timestamp_str}"
+                if self.youtube_client:
+                    self.youtube_client.send_message(reply)
+                return
+            
+            # 4. Custom Command from DB
+            else:
+                db_cmd = self.db.get_command(cmd_name)
+                if db_cmd:
+                    self.db.increment_command_use(cmd_name)
+                    response_text = db_cmd["response_text"]
+                    uses = db_cmd["use_count"] + 1
+                    
+                    # Replace placeholders
+                    response_text = response_text.replace("{user}", f"@{user}")
+                    response_text = response_text.replace("{count}", str(uses))
+                    
+                    if self.youtube_client:
+                        self.youtube_client.send_message(response_text)
+                    return
 
         # 3. Append to chat history (Listen to everything)
         self.chat_history.append(f"{user}: {message}")

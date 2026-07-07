@@ -77,6 +77,14 @@
                 <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 <span>Database</span>
               </button>
+              <button class="nav-item" data-tab="tab-commands" id="nav-commands">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 10h8"></path><path d="M8 14h6"></path></svg>
+                <span>Commands</span>
+              </button>
+              <button class="nav-item" data-tab="tab-highlights" id="nav-highlights">
+                <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                <span>Highlights</span>
+              </button>
             </nav>
           </div>
 
@@ -95,8 +103,9 @@
                 </button>
               </div>
               <button class="channel-name-pill" id="btn-sidebar-channel">
-                <span class="pill-dot"></span>
-                <span id="sidebar-channel-name">@ChannelNameHere</span>
+                <span class="pill-dot" id="sidebar-channel-dot"></span>
+                <img id="sidebar-channel-avatar" class="channel-avatar hidden" src="" alt="Avatar">
+                <span id="sidebar-channel-name">AxiBot</span>
               </button>
             </div>
           </div>
@@ -440,13 +449,91 @@
                       <th>Display Name</th>
                       <th>Last Active</th>
                       <th class="text-center">Chats</th>
+                      <th class="text-center">AxiCoins</th>
                       <th>AI Personality Memory Summary</th>
                       <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="viewer-table-body">
                     <tr>
-                      <td colspan="5" class="text-center pad-all">No viewers tracked yet. Start the bot and receive chats to populate this database.</td>
+                      <td colspan="6" class="text-center pad-all">No viewers tracked yet. Start the bot and receive chats to populate this database.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 6: CUSTOM COMMANDS -->
+          <section id="tab-commands" class="tab-panel">
+            <header class="panel-header">
+              <div>
+                <h1 class="panel-title">Custom Commands Manager</h1>
+                <p class="panel-subtitle">Create and manage customized trigger words and automated responses for your YouTube chat.</p>
+              </div>
+              <div class="header-controls">
+                <div class="toggle-group commands-toggle" style="margin-right: 12px; display: inline-flex; align-items: center; gap: 8px;">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="setting-enable-commands" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-title">Enable Custom Commands</span>
+                </div>
+                <button id="btn-show-add-command-panel" class="btn btn-primary btn-small">
+                  + Create Command
+                </button>
+              </div>
+            </header>
+
+            <div class="glass-card table-card" id="commands-table-card">
+              <div class="table-wrapper">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Command</th>
+                      <th>Response Message</th>
+                      <th class="text-center">Uses</th>
+                      <th class="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="commands-table-body">
+                    <tr>
+                      <td colspan="4" class="text-center pad-all">No custom commands created yet. Click "+ Create Command" to add one.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+          </section>
+
+          <!-- TAB 7: HIGHLIGHTS LOG -->
+          <section id="tab-highlights" class="tab-panel">
+            <header class="panel-header">
+              <div>
+                <h1 class="panel-title">Stream Highlights & VOD Clips</h1>
+                <p class="panel-subtitle">Chronological list of triggers when viewers type !clip or !highlight in YouTube chat.</p>
+              </div>
+              <div class="header-controls">
+                <button id="btn-clear-highlights" class="btn btn-secondary btn-small" style="background: rgba(255, 99, 132, 0.15); color: #ff6b8b; border: 1px solid rgba(255, 99, 132, 0.3);">
+                  Clear Logs
+                </button>
+              </div>
+            </header>
+
+            <div class="glass-card table-card" id="highlights-table-card">
+              <div class="table-wrapper">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Time Offset</th>
+                      <th>Viewer</th>
+                      <th>Chat Message Context</th>
+                      <th>Logged Date</th>
+                      <th class="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="highlights-table-body">
+                    <tr>
+                      <td colspan="5" class="text-center pad-all">No stream VOD clips marked yet. Viewers can type !clip in chat.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -479,6 +566,11 @@
       </div>
 
       <div class="form-group pad-top">
+        <label for="edit-user-points">AxiCoins Balance</label>
+        <input type="number" id="edit-user-points" min="0">
+      </div>
+
+      <div class="form-group pad-top">
         <label for="edit-user-summary">AI Personality Memory Summary</label>
         <textarea id="edit-user-summary" rows="4" maxlength="150" placeholder="Summarize who they are (under 150 characters)"></textarea>
         <small class="form-help">This profile is injected into Gemini context when they query the bot about themselves.</small>
@@ -488,6 +580,39 @@
         <button id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
         <button id="btn-save-modal" class="btn btn-primary">Save Changes</button>
       </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM COMMAND EDITOR DIALOG (Glassmorphic Modal) -->
+  <div id="modal-edit-command" class="modal-overlay hidden">
+    <div class="glass-card modal-card animate-zoom">
+      <h2 class="modal-title" id="command-editor-title">Create New Command</h2>
+      <p class="modal-subtitle">Define trigger name and bot automated chat response.</p>
+      
+      <form id="form-command-editor" class="settings-form pad-top">
+        <div class="form-group">
+          <label for="input-command-name">Command Trigger (e.g. !discord)</label>
+          <div class="command-input-wrapper">
+            <span class="command-prefix-indicator">!</span>
+            <input type="text" id="input-command-name" placeholder="discord" required>
+          </div>
+          <small class="form-help">Trigger word typed in live chat (without exclamation mark).</small>
+        </div>
+
+        <div class="form-group pad-top">
+          <label for="input-command-response">Response Text</label>
+          <textarea id="input-command-response" rows="4" maxlength="300" placeholder="Join our Discord at discord.gg/example {user}!" required></textarea>
+          <small class="form-help">Supported placeholders: <strong>{user}</strong> (mentions viewer), <strong>{count}</strong> (total trigger uses).</small>
+        </div>
+
+        <div class="modal-actions pad-top">
+          <span class="save-status-msg" id="command-save-status"></span>
+          <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;">
+            <button type="button" id="btn-cancel-command-edit" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="btn-save-command" class="btn btn-primary">Save Command</button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
   
