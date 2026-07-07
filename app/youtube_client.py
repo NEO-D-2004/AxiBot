@@ -419,14 +419,14 @@ class YouTubeClient:
             
         try:
             request = streamer_client.subscriptions().list(
-                part="subscriberDetails",
+                part="subscriberSnippet",
                 mySubscribers=True,
                 maxResults=max_results
             )
             response = request.execute()
             subscribers = []
             for item in response.get("items", []):
-                details = item.get("subscriberDetails", {})
+                details = item.get("subscriberSnippet", {})
                 subscribers.append({
                     "id": details.get("channelId"),
                     "name": details.get("title", "Unknown User")

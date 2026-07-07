@@ -1,21 +1,21 @@
 --- Test 1: Periodic Messages ---
 Generating 10 messages (expect no immediate repeats):
-1: <coroutine object EngagementManager.get_next_message at 0x0000017CEA11A4D0>
-2: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EF6B0>
-3: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EF780>
-4: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EF850>
-5: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EF920>
-6: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EF9F0>
-7: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EFAC0>
-8: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EFB90>
-9: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EFC60>
-10: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EFD30>
+1: <coroutine object EngagementManager.get_next_message at 0x000002360ACAA4D0>
+2: <coroutine object EngagementManager.get_next_message at 0x000002360D25F6B0>
+3: <coroutine object EngagementManager.get_next_message at 0x000002360D25F780>
+4: <coroutine object EngagementManager.get_next_message at 0x000002360D25F850>
+5: <coroutine object EngagementManager.get_next_message at 0x000002360D25F920>
+6: <coroutine object EngagementManager.get_next_message at 0x000002360D25F9F0>
+7: <coroutine object EngagementManager.get_next_message at 0x000002360D25FAC0>
+8: <coroutine object EngagementManager.get_next_message at 0x000002360D25FB90>
+9: <coroutine object EngagementManager.get_next_message at 0x000002360D25FC60>
+10: <coroutine object EngagementManager.get_next_message at 0x000002360D25FD30>
 
 --- Test 2: Rate Limiting ---
-FAILURE: Rate limit failed, got: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EFE00>
+FAILURE: Rate limit failed, got: <coroutine object EngagementManager.get_next_message at 0x000002360D25FE00>
 Waiting 2.1 seconds...
-Success: Message generated after wait: <coroutine object EngagementManager.get_next_message at 0x0000017CEC6EFED0>
+Success: Message generated after wait: <coroutine object EngagementManager.get_next_message at 0x000002360D25FED0>
 
 --- Test 3: Viewer Spike Trigger ---
-FAILURE: Small increase triggered message: <coroutine object EngagementManager.check_triggers at 0x0000017CEC6F2980>
-Success: Big increase triggered message: <coroutine object EngagementManager.check_triggers at 0x0000017CEC6F2E30>
+FAILURE: Small increase triggered message: <coroutine object EngagementManager.check_triggers at 0x000002360D262980>
+Success: Big increase triggered message: <coroutine object EngagementManager.check_triggers at 0x000002360D262B60>

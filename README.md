@@ -1,6 +1,6 @@
 # AxiBot - AI YouTube Moderator & Live Assistant
 
-AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by the NVIDIA NIM Inference API (using models such as Google Gemma 3). It moderates chat, welcomes subscribers, engages viewers, and tracks stream goals like a human moderator—all optimized for low latency and minimal YouTube API quota usage.
+AxiBot is a smart, privacy-focused YouTube Live Chat bot powered by the NVIDIA NIM Inference API (using models such as Qwen 3.5). It moderates chat, welcomes subscribers, engages viewers, and tracks stream goals like a human moderator—all optimized for low latency and minimal YouTube API quota usage.
 
 AxiBot features a dark-themed glassmorphic desktop GUI dashboard built with PyWebView for easy configuration, visual log streaming, database management, and engine control.
 
@@ -9,7 +9,7 @@ AxiBot features a dark-themed glassmorphic desktop GUI dashboard built with PyWe
 ## Features
 
 - **Desktop GUI Dashboard**: A dark-themed dashboard to monitor bot status, live viewer metrics, likes goals, subscriber counts, and real-time logs.
-- **High-Performance Intelligence**: Integrates NVIDIA NIM API to run top-tier open-source LLMs (like Google Gemma 3 or Llama 3) with extremely low response latency.
+- **High-Performance Intelligence**: Integrates NVIDIA NIM API to run top-tier open-source LLMs (like Qwen 3.5 or GPT-OSS) with extremely low response latency.
 - **Dual YouTube Account Support**: 
   - **Streamer Account**: Links the streamer's channel via OAuth to automatically register `STREAMER_CHANNEL_ID` and sync live chat data.
   - **Bot Account**: Links a secondary bot account that polls live chat and replies to viewer messages.
@@ -79,7 +79,7 @@ AxiBot requires two separate credentials paths in your `.env` configuration file
    STREAMER_CHANNEL_ID=
    BOT_NAME=AxiBot
    NVIDIA_API_KEY=your_nvidia_api_key_here
-   NVIDIA_MODEL_ID=google/gemma-3n-e2b-it
+   NVIDIA_MODEL_ID=qwen/qwen3.5-122b-a10b
    COOLDOWN_SECONDS=60
    ```
 
@@ -104,7 +104,7 @@ To allow AxiBot to perform moderation actions (deleting spam comments, timing ou
 - **Google OAuth Login Warning**: If Google warns that the app is unverified during sign-in, click **Advanced** -> **Go to AxiBot (unsafe)** to proceed. This is standard for local testing apps.
 - **Bot is reading but not posting replies**: Double-check that your Bot Account is linked in the Settings tab, and that it has been granted Moderator rights on the Streamer's channel.
 - **SQLite Database Locked or Write Permissions Error**: Ensure the application is installed in a directory where it has write permissions (like `AppData/Local/Programs/AxiBot/` or a local development folder). Installing to `Program Files` is not recommended unless running as administrator.
-- **API Key Invalid Error**: Ensure you have a valid Nvidia NIM API key pasted in the settings tab and that you have selected a valid model ID (e.g. `google/gemma-3n-e2b-it`).
+- **API Key Invalid Error**: Ensure you have a valid Nvidia NIM API key pasted in the settings tab and that you have selected a valid model ID (e.g. `qwen/qwen3.5-122b-a10b`).
 
 ---
 

@@ -54,7 +54,10 @@
           <div class="sidebar-top">
             <div class="sidebar-header">
               <img src="app-logo.svg" class="sidebar-logo" alt="AxiBot Logo">
-              <span class="sidebar-title">AxiBot</span>
+              <div style="display: flex; flex-direction: column;">
+                <span class="sidebar-title">AxiBot</span>
+                <span class="sidebar-version" style="font-size: 10px; color: var(--sidebar-text-muted); opacity: 0.8; margin-top: -2px; font-weight: 600; letter-spacing: 0.5px;">v1.2</span>
+              </div>
             </div>
 
             <nav class="sidebar-nav">
@@ -83,10 +86,19 @@
               <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
               <span>Settings</span>
             </button>
-            <button class="channel-name-pill" id="btn-sidebar-channel">
-              <span class="pill-dot"></span>
-              <span id="sidebar-channel-name">@ChannelNameHere</span>
-            </button>
+            <div class="sidebar-user-menu">
+              <!-- Logout Popup -->
+              <div id="logout-popup" class="logout-popup">
+                <button id="btn-sidebar-logout" class="btn-logout">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right: 4px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+                  <span>Logout Account</span>
+                </button>
+              </div>
+              <button class="channel-name-pill" id="btn-sidebar-channel">
+                <span class="pill-dot"></span>
+                <span id="sidebar-channel-name">@ChannelNameHere</span>
+              </button>
+            </div>
           </div>
         </aside>
 
@@ -189,8 +201,11 @@
 
                   <div class="form-group">
                     <label for="setting-model-id">NVIDIA Model ID</label>
-                    <input type="text" id="setting-model-id" name="NVIDIA_MODEL_ID" placeholder="google/gemma-3n-e2b-it">
-                    <small class="form-help">The LLM model used for reply generations (e.g. google/gemma-3n-e2b-it or meta/llama-3.1-405b).</small>
+                    <select id="setting-model-id" name="NVIDIA_MODEL_ID">
+                      <option value="qwen/qwen3.5-122b-a10b">qwen/qwen3.5-122b-a10b</option>
+                      <option value="openai/gpt-oss-120b">openai/gpt-oss-120b</option>
+                    </select>
+                    <small class="form-help">Select the LLM model used for reply generations.</small>
                   </div>
 
                   <div class="form-group">
@@ -202,18 +217,7 @@
                     <small class="form-help">Minimum wait time before the bot replies to the same user again, to avoid chat spamming.</small>
                   </div>
 
-                  <div class="form-group" style="margin-bottom: 25px; margin-top: 15px;">
-                    <div class="toggle-group" style="margin: 0;">
-                      <label class="toggle-switch">
-                        <input type="checkbox" id="setting-enable-database" checked>
-                        <span class="toggle-slider"></span>
-                      </label>
-                      <div class="toggle-label-group">
-                        <span class="toggle-title">Enable Viewer Database</span>
-                        <small class="toggle-description">Track viewer logs, message count, and compile personality summaries.</small>
-                      </div>
-                    </div>
-                  </div>
+
 
                   <div class="form-actions">
                     <span class="save-status-msg" id="settings-save-status"></span>
@@ -222,36 +226,9 @@
                 </form>
               </div>
 
-              <div class="settings-sidebar-cards" style="display: flex; flex-direction: column; gap: 25px; width: 100%;">
-                <div class="glass-card settings-card" id="settings-accounts-card" style="width: 100%;">
-                  <h2 class="section-title">YouTube Connections</h2>
-                  <p class="control-description">AxiBot uses a permanent pre-configured bot account for replies. You only need to link your Streamer Channel.</p>
-                  
-                  <!-- Streamer Connection Group -->
-                  <div class="account-connection-group" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                      <span class="control-description" style="font-weight: 600; color: #fff; margin: 0;">1. Streamer Channel</span>
-                      <span id="status-streamer-badge" class="badge" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Disconnected</span>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 10px;">
-                      <input type="text" id="setting-channel-id" placeholder="Linked automatically via OAuth" readonly style="background: rgba(255, 255, 255, 0.02); border-color: rgba(255, 255, 255, 0.05); color: var(--text-muted); cursor: not-allowed; font-size: 12px; height: 36px; width: 100%; border-radius: 6px; padding: 0 10px;">
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                      <button type="button" id="btn-link-streamer" class="btn btn-primary btn-small" style="flex-grow: 1; font-size: 12px; margin: 0; padding: 8px 12px;">Link Streamer</button>
-                      <button type="button" id="btn-unlink-streamer" class="btn btn-secondary btn-small" style="font-size: 12px; margin: 0; padding: 8px 12px;">Disconnect</button>
-                    </div>
-                  </div>
+              <div class="settings-sidebar-cards">
 
-                  <!-- Bot Connection Group -->
-                  <div class="account-connection-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <span class="control-description" style="font-weight: 600; color: #fff; margin: 0;">2. Bot Account (Permanent)</span>
-                      <span id="status-bot-badge" class="badge" style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Disconnected</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="glass-card settings-card" id="settings-control-card" style="width: 100%;">
+                <div class="glass-card settings-card" id="settings-control-card">
                   <h2 class="section-title">Engine Run Control</h2>
                   <p class="control-description">Manage the background connection state of the bot. Restarting is useful when you have updated environment keys.</p>
                   <div class="engine-control-actions">
@@ -274,16 +251,16 @@
                   </div>
                 </div>
 
-                <div class="glass-card settings-card" id="settings-maintenance-card" style="width: 100%;">
+                <div class="glass-card settings-card" id="settings-maintenance-card">
                   <h2 class="section-title">System Maintenance</h2>
                   <p class="control-description">Clear cached livestream IDs or perform a complete wipe of the viewers SQLite database.</p>
                   <div class="engine-control-actions">
-                    <button id="btn-clear-cache" class="btn btn-control-restart" style="background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.25);">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <button id="btn-clear-cache" class="btn btn-control-restart">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                       Clear Stream Cache
                     </button>
                     <button id="btn-reset-db" class="btn btn-control-stop">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right:4px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                       Reset Viewers Database
                     </button>
                   </div>
@@ -368,7 +345,7 @@
               </div>
               <div class="header-controls">
                 <button id="btn-force-engagement" class="btn btn-secondary">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px;"><polygon points="6 3 20 12 6 21"></polygon></svg>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6 3 20 12 6 21"></polygon></svg>
                   Force Trigger Now
                 </button>
               </div>
@@ -442,7 +419,14 @@
                 <h1 class="panel-title">Viewer Database Manager</h1>
                 <p class="panel-subtitle">Manage viewer memory and message count logs saved inside "axibot.db".</p>
               </div>
-              <div class="header-controls">
+              <div class="header-controls viewer-controls">
+                <div class="toggle-group database-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="setting-enable-database" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-title">Enable Database</span>
+                </div>
                 <input type="text" id="search-viewers" class="glass-input-small" placeholder="Search display name...">
               </div>
             </header>

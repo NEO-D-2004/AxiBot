@@ -151,8 +151,10 @@ async function checkAuthAndSwitchView() {
       
       // Update Streamer Handle pill at bottom
       const config = await window.pywebview.api.get_settings();
-      if (config && config.STREAMER_CHANNEL_ID) {
-        sidebarChannel.innerText = `@${config.BOT_NAME || 'AxiBot'}`;
+      if (config && config.STREAMER_CHANNEL_NAME) {
+        sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_NAME}`;
+      } else if (config && config.STREAMER_CHANNEL_ID) {
+        sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_ID}`;
       } else {
         sidebarChannel.innerText = "@AxiBot";
       }
@@ -237,17 +239,46 @@ function setupButtonListeners() {
 
 
 
-  // Sidebar Channel Name Pill -> Disconnect option
+  // Sidebar Channel Name Pill -> Toggle Logout Popup
+  const sidebarUserMenu = document.querySelector('.sidebar-user-menu');
   const btnChannelPill = document.getElementById('btn-sidebar-channel');
-  btnChannelPill.addEventListener('click', async () => {
-    if (confirm("Disconnect account? This deletes the YouTube authentication credentials file.")) {
-      if (botRunning) {
-        await executeStopBot();
+  if (btnChannelPill && sidebarUserMenu) {
+    btnChannelPill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebarUserMenu.classList.toggle('active');
+    });
+
+    document.addEventListener('click', () => {
+      sidebarUserMenu.classList.remove('active');
+    });
+  }
+
+  // Sidebar Logout Button handler
+  const btnSidebarLogout = document.getElementById('btn-sidebar-logout');
+  if (btnSidebarLogout) {
+    btnSidebarLogout.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (confirm("Disconnect account? This deletes the YouTube authentication credentials file.")) {
+        if (botRunning) {
+          await executeStopBot();
+        }
+        await window.pywebview.api.disconnect_youtube("streamer");
+        // Clear cached channel name in config
+        try {
+          const config = await window.pywebview.api.get_settings();
+          config["STREAMER_CHANNEL_NAME"] = "";
+          config["STREAMER_CHANNEL_ID"] = "";
+          await window.pywebview.api.save_settings(config);
+        } catch (err) {
+          console.error(err);
+        }
+        if (sidebarUserMenu) {
+          sidebarUserMenu.classList.remove('active');
+        }
+        await checkAuthAndSwitchView();
       }
-      await window.pywebview.api.disconnect_youtube("streamer");
-      await checkAuthAndSwitchView();
-    }
-  });
+    });
+  }
 
   // Start / Stop Bot Engine from Dashboard
   const btnToggleBot = document.getElementById('btn-toggle-bot');
@@ -479,8 +510,10 @@ function setupButtonListeners() {
           const config = await window.pywebview.api.get_settings();
           const sidebarChannel = document.getElementById('sidebar-channel-name');
           if (sidebarChannel) {
-            if (config && config.STREAMER_CHANNEL_ID) {
-              sidebarChannel.innerText = `@${config.BOT_NAME || 'AxiBot'}`;
+            if (config && config.STREAMER_CHANNEL_NAME) {
+              sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_NAME}`;
+            } else if (config && config.STREAMER_CHANNEL_ID) {
+              sidebarChannel.innerText = `@${config.STREAMER_CHANNEL_ID}`;
             } else {
               sidebarChannel.innerText = "@AxiBot";
             }
@@ -491,7 +524,7 @@ function setupButtonListeners() {
         } else {
           const errMsg = (result && result.error) ? result.error : "Unknown connection failure.";
           if (settingsSaveStatus) {
-            settingsSaveStatus.innerHTML = `<span style="color:#ef4444; font-weight:600;">${errMsg}</span>`;
+            settingsSaveStatus.innerHTML = `<span class="inline-error">${errMsg}</span>`;
           } else {
             alert("OAuth error: " + errMsg);
           }
@@ -546,7 +579,7 @@ function setupButtonListeners() {
         } else {
           const errMsg = (result && result.error) ? result.error : "Unknown connection failure.";
           if (settingsSaveStatus) {
-            settingsSaveStatus.innerHTML = `<span style="color:#ef4444; font-weight:600;">${errMsg}</span>`;
+            settingsSaveStatus.innerHTML = `<span class="inline-error">${errMsg}</span>`;
           } else {
             alert("OAuth error: " + errMsg);
           }
@@ -620,6 +653,20 @@ function setupFormListeners() {
     cooldownDisplay.innerText = `${cooldownSlider.value}s`;
   });
 
+  // Database toggle auto-save
+  const enableDbCheckbox = document.getElementById('setting-enable-database');
+  if (enableDbCheckbox) {
+    enableDbCheckbox.addEventListener('change', async () => {
+      try {
+        const config = await window.pywebview.api.get_settings();
+        config["ENABLE_DATABASE"] = enableDbCheckbox.checked ? "True" : "False";
+        await window.pywebview.api.save_settings(config);
+      } catch (err) {
+        console.error("Failed to auto-save database status:", err);
+      }
+    });
+  }
+
   // Engagement Settings form
   const formEngagement = document.getElementById('form-engagement-settings');
   const engagementSaveStatus = document.getElementById('engagement-save-status');
@@ -679,7 +726,24 @@ async function loadAllSettings() {
     }
 
     document.getElementById('setting-api-key').value = config.NVIDIA_API_KEY || "";
-    document.getElementById('setting-model-id').value = config.NVIDIA_MODEL_ID || "google/gemma-3n-e2b-it";
+    const modelSelect = document.getElementById('setting-model-id');
+    if (modelSelect) {
+      const val = config.NVIDIA_MODEL_ID || "qwen/qwen3.5-122b-a10b";
+      let exists = false;
+      for (let i = 0; i < modelSelect.options.length; i++) {
+        if (modelSelect.options[i].value === val) {
+          exists = true;
+          break;
+        }
+      }
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.innerHTML = val;
+        modelSelect.appendChild(opt);
+      }
+      modelSelect.value = val;
+    }
     
     const cooldownVal = parseInt(config.COOLDOWN_SECONDS || 60);
     document.getElementById('setting-cooldown').value = cooldownVal;
@@ -695,14 +759,10 @@ async function loadAllSettings() {
     if (statusStreamerBadge) {
       if (config.STREAMER_CONNECTED) {
         statusStreamerBadge.innerText = "Connected";
-        statusStreamerBadge.style.background = "rgba(16, 185, 129, 0.15)";
-        statusStreamerBadge.style.color = "#10b981";
-        statusStreamerBadge.style.border = "1px solid rgba(16, 185, 129, 0.2)";
+        statusStreamerBadge.className = "badge badge-connected";
       } else {
         statusStreamerBadge.innerText = "Disconnected";
-        statusStreamerBadge.style.background = "rgba(239, 68, 68, 0.15)";
-        statusStreamerBadge.style.color = "#ef4444";
-        statusStreamerBadge.style.border = "1px solid rgba(239, 68, 68, 0.2)";
+        statusStreamerBadge.className = "badge badge-disconnected";
       }
     }
 
@@ -711,14 +771,10 @@ async function loadAllSettings() {
     if (statusBotBadge) {
       if (config.BOT_CONNECTED) {
         statusBotBadge.innerText = "Connected";
-        statusBotBadge.style.background = "rgba(16, 185, 129, 0.15)";
-        statusBotBadge.style.color = "#10b981";
-        statusBotBadge.style.border = "1px solid rgba(16, 185, 129, 0.2)";
+        statusBotBadge.className = "badge badge-connected";
       } else {
         statusBotBadge.innerText = "Disconnected";
-        statusBotBadge.style.background = "rgba(239, 68, 68, 0.15)";
-        statusBotBadge.style.color = "#ef4444";
-        statusBotBadge.style.border = "1px solid rgba(239, 68, 68, 0.2)";
+        statusBotBadge.className = "badge badge-disconnected";
       }
     }
   } catch (err) {
@@ -763,7 +819,7 @@ function renderBannedChips() {
   container.innerHTML = "";
   
   if (localBannedWords.length === 0) {
-    container.innerHTML = `<span style="font-size:12px; color:var(--text-muted);">No blocked phrases configured. Add one above.</span>`;
+    container.innerHTML = `<span class="empty-state">No blocked phrases configured. Add one above.</span>`;
     return;
   }
 
@@ -792,7 +848,7 @@ function renderEngagementMessagesList() {
   listContainer.innerHTML = "";
 
   if (localEngagementMsgs.length === 0) {
-    listContainer.innerHTML = `<div style="padding: 20px; font-size:13px; color:var(--text-muted); text-align:center;">No fallback messages configured. Add one above.</div>`;
+    listContainer.innerHTML = `<div class="empty-state padded">No fallback messages configured. Add one above.</div>`;
     return;
   }
 
@@ -855,10 +911,10 @@ function renderViewerTable(filterQuery = "") {
 
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td style="font-weight:600;">${u.display_name || "Unknown"}</td>
-      <td style="font-size:12px; color:var(--text-muted);">${lastSeenStr}</td>
-      <td class="text-center" style="font-weight:500;">${u.message_count || 0}</td>
-      <td style="font-size:13px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${u.personality_summary || ''}">${u.personality_summary || 'No memory recorded.'}</td>
+      <td class="viewer-name">${u.display_name || "Unknown"}</td>
+      <td class="viewer-date">${lastSeenStr}</td>
+      <td class="text-center viewer-count">${u.message_count || 0}</td>
+      <td class="viewer-summary" title="${u.personality_summary || ''}">${u.personality_summary || 'No memory recorded.'}</td>
       <td class="text-right">
         <div class="action-buttons-cell">
           <button class="action-link btn-edit-summary" data-id="${u.user_id}" data-name="${u.display_name}" data-count="${u.message_count || 0}" data-summary="${u.personality_summary}">Edit</button>
@@ -1198,7 +1254,7 @@ async function executeYouTubeConnection() {
       }, 1500);
     } else {
       const errMsg = (result && result.error) ? result.error : "Unknown connection failure.";
-      authStatusDesc.innerHTML = `<span style="color:#ef4444; font-weight:600;">${errMsg}</span>`;
+      authStatusDesc.innerHTML = `<span class="inline-error">${errMsg}</span>`;
       btnConnect.disabled = false;
     }
   } catch (err) {

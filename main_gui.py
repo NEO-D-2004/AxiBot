@@ -80,6 +80,30 @@ class WebAPI:
         # Pre-populate settings from .env
         load_dotenv(override=True)
 
+    def _get_cached_channel_data(self):
+        cache_path = "storage/channel_cache.json"
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"Error reading channel cache: {e}")
+        return {}
+
+    def _save_channel_cache(self, channel_id, channel_name, avatar_url=""):
+        cache_path = "storage/channel_cache.json"
+        os.makedirs("storage", exist_ok=True)
+        try:
+            data = {
+                "channel_id": channel_id,
+                "channel_name": channel_name,
+                "avatar_url": avatar_url
+            }
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            print(f"Error saving channel cache: {e}")
+
     def check_streamer_auth_status(self):
         """ Returns True if the Streamer YouTube OAuth token exists """
         token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
@@ -89,6 +113,39 @@ class WebAPI:
         """ Returns True if the Bot YouTube OAuth token exists """
         token_path = settings.YOUTUBE_TOKEN_PATH
         return os.path.exists(token_path)
+
+    def get_linked_channel_name(self):
+        """ Returns the linked YouTube channel name/title """
+        token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
+        if not os.path.exists(token_path):
+            return ""
+        
+        # 1. Check local cache first to avoid calling API and preventing transient logout/errors
+        cached_data = self._get_cached_channel_data()
+        if cached_data.get("channel_name"):
+            return cached_data["channel_name"]
+            
+        # 2. If not cached, fetch from YouTube API
+        try:
+            from google.oauth2.credentials import Credentials
+            from googleapiclient.discovery import build
+            creds = Credentials.from_authorized_user_file(token_path)
+            youtube = build("youtube", "v3", credentials=creds)
+            response = youtube.channels().list(part="id,snippet", mine=True).execute()
+            if response.get("items"):
+                channel_data = response["items"][0]
+                channel_id = channel_data["id"]
+                channel_title = channel_data["snippet"]["title"]
+                avatar_url = channel_data["snippet"].get("thumbnails", {}).get("default", {}).get("url", "")
+                
+                # Cache it
+                self._save_channel_cache(channel_id, channel_title, avatar_url)
+                return channel_title
+        except Exception as e:
+            print(f"Error fetching channel name: {e}")
+            if settings.STREAMER_CHANNEL_NAME:
+                return settings.STREAMER_CHANNEL_NAME
+        return ""
 
     def check_auth_status(self):
         """ Returns True if the YouTube Streamer OAuth token exists (compatibility check) """
@@ -132,9 +189,14 @@ class WebAPI:
                             print(f"Linked {account_type.capitalize()} Channel: {channel_title} (ID: {channel_id})")
                             
                             if account_type == "streamer":
+                                # Cache it locally
+                                avatar_url = channel_data["snippet"].get("thumbnails", {}).get("default", {}).get("url", "")
+                                self._save_channel_cache(channel_id, channel_title, avatar_url)
+                                
                                 # Persist this to settings and .env
                                 current_config = self.get_settings()
                                 current_config["STREAMER_CHANNEL_ID"] = channel_id
+                                current_config["STREAMER_CHANNEL_NAME"] = channel_title
                                 self.save_settings(current_config)
                 except Exception as ex:
                     print(f"Warning: Could not auto-detect channel details: {ex}")
@@ -154,26 +216,73 @@ class WebAPI:
         token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
         if os.path.exists(token_path):
             os.remove(token_path)
+            # Remove local channel cache on disconnect
+            cache_path = "storage/channel_cache.json"
+            if os.path.exists(cache_path):
+                try:
+                    os.remove(cache_path)
+                except Exception:
+                    pass
             print(f"Disconnected YouTube {account_type} account. Token deleted.")
             return True
         return False
 
     def get_settings(self):
         """ Reads the current configurations """
-        load_dotenv(override=True)
+        from app.settings import load_local_settings
+        load_local_settings()
+        
+        channel_name = settings.STREAMER_CHANNEL_NAME
+        channel_id = settings.STREAMER_CHANNEL_ID
+        
+        # Restore channel details from local cache if we are authenticated
+        if self.check_streamer_auth_status():
+            cached_data = self._get_cached_channel_data()
+            if cached_data:
+                if not channel_name:
+                    channel_name = cached_data.get("channel_name", "")
+                    settings.STREAMER_CHANNEL_NAME = channel_name
+                if not channel_id:
+                    channel_id = cached_data.get("channel_id", "")
+                    settings.STREAMER_CHANNEL_ID = channel_id
+            
+            # Fetch from API only if name is still missing
+            if not channel_name:
+                channel_name = self.get_linked_channel_name()
+                if channel_name:
+                    settings.STREAMER_CHANNEL_NAME = channel_name
+                    # Reload cached data to grab the channel ID
+                    cached_data = self._get_cached_channel_data()
+                    channel_id = cached_data.get("channel_id", settings.STREAMER_CHANNEL_ID)
+                    settings.STREAMER_CHANNEL_ID = channel_id
+            
+            # If values were missing from memory but found in cache/API, persist them
+            if channel_name != settings.STREAMER_CHANNEL_NAME or channel_id != settings.STREAMER_CHANNEL_ID:
+                current_config = {
+                    "BOT_NAME": settings.BOT_NAME,
+                    "STREAMER_CHANNEL_ID": settings.STREAMER_CHANNEL_ID,
+                    "NVIDIA_API_KEY": settings.NVIDIA_API_KEY,
+                    "NVIDIA_MODEL_ID": settings.NVIDIA_MODEL_ID,
+                    "COOLDOWN_SECONDS": str(settings.COOLDOWN_SECONDS),
+                    "ENABLE_DATABASE": "True" if settings.ENABLE_DATABASE else "False",
+                    "STREAMER_CHANNEL_NAME": settings.STREAMER_CHANNEL_NAME
+                }
+                self.save_settings(current_config)
+
         return {
-            "BOT_NAME": os.getenv("BOT_NAME", "AxiBot"),
-            "STREAMER_CHANNEL_ID": os.getenv("STREAMER_CHANNEL_ID", ""),
-            "NVIDIA_API_KEY": os.getenv("NVIDIA_API_KEY", ""),
-            "NVIDIA_MODEL_ID": os.getenv("NVIDIA_MODEL_ID", "google/gemma-3n-e2b-it"),
-            "COOLDOWN_SECONDS": str(settings.COOLDOWN_SECONDS if hasattr(settings, 'COOLDOWN_SECONDS') else 60),
+            "BOT_NAME": settings.BOT_NAME,
+            "STREAMER_CHANNEL_ID": settings.STREAMER_CHANNEL_ID,
+            "NVIDIA_API_KEY": settings.NVIDIA_API_KEY,
+            "NVIDIA_MODEL_ID": settings.NVIDIA_MODEL_ID,
+            "COOLDOWN_SECONDS": str(settings.COOLDOWN_SECONDS),
             "STREAMER_CONNECTED": self.check_streamer_auth_status(),
             "BOT_CONNECTED": self.check_bot_auth_status(),
-            "ENABLE_DATABASE": os.getenv("ENABLE_DATABASE", "True") == "True"
+            "ENABLE_DATABASE": settings.ENABLE_DATABASE,
+            "STREAMER_CHANNEL_NAME": settings.STREAMER_CHANNEL_NAME
         }
 
     def save_settings(self, new_settings):
-        """ Updates the .env file and sets variables in memory """
+        """ Updates local settings.json, the .env file, and memory variables """
         try:
             print("Saving new configuration settings...")
             # Update settings object properties
@@ -183,38 +292,47 @@ class WebAPI:
             settings.NVIDIA_MODEL_ID = new_settings.get("NVIDIA_MODEL_ID", settings.NVIDIA_MODEL_ID)
             if "ENABLE_DATABASE" in new_settings:
                 settings.ENABLE_DATABASE = new_settings.get("ENABLE_DATABASE") == "True"
+            if "STREAMER_CHANNEL_NAME" in new_settings:
+                settings.STREAMER_CHANNEL_NAME = new_settings.get("STREAMER_CHANNEL_NAME", "")
             
             # Cooldown check
             cooldown_val = int(new_settings.get("COOLDOWN_SECONDS", 60))
-            # Modifying on instances and routing
             settings.COOLDOWN_SECONDS = cooldown_val
 
-            # Write back to .env
-            env_lines = []
-            env_keys_written = set()
+            # Save locally to storage/settings.json
+            from app.settings import save_local_settings
+            save_local_settings()
+
+            # Attempt to write to .env (non-blocking if write-protected/packaged)
+            try:
+                env_lines = []
+                env_keys_written = set()
+                
+                if os.path.exists(".env"):
+                    with open(".env", "r", encoding="utf-8") as f:
+                        for line in f:
+                            stripped = line.strip()
+                            if stripped and not stripped.startswith("#") and "=" in stripped:
+                                k, v = stripped.split("=", 1)
+                                k = k.strip()
+                                if k in new_settings:
+                                    env_lines.append(f"{k}={new_settings[k]}\n")
+                                    env_keys_written.add(k)
+                                    continue
+                            env_lines.append(line)
+                
+                # Write missing ones
+                for k, v in new_settings.items():
+                    if k not in env_keys_written:
+                        env_lines.append(f"{k}={v}\n")
+                
+                with open(".env", "w", encoding="utf-8") as f:
+                    f.writelines(env_lines)
+                
+                load_dotenv(override=True)
+            except Exception as env_err:
+                print(f"Warning: Could not write to .env file (non-fatal): {env_err}")
             
-            if os.path.exists(".env"):
-                with open(".env", "r") as f:
-                    for line in f:
-                        stripped = line.strip()
-                        if stripped and not stripped.startswith("#") and "=" in stripped:
-                            k, v = stripped.split("=", 1)
-                            k = k.strip()
-                            if k in new_settings:
-                                env_lines.append(f"{k}={new_settings[k]}\n")
-                                env_keys_written.add(k)
-                                continue
-                        env_lines.append(line)
-            
-            # Write missing ones
-            for k, v in new_settings.items():
-                if k not in env_keys_written:
-                    env_lines.append(f"{k}={v}\n")
-            
-            with open(".env", "w") as f:
-                f.writelines(env_lines)
-            
-            load_dotenv(override=True)
             print("Settings saved and reloaded successfully.")
             return True
         except Exception as e:
