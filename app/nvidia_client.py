@@ -5,9 +5,15 @@ from app.settings import settings
 class NvidiaClient:
     def __init__(self, model_name=None):
         self.model_name = model_name or settings.NVIDIA_MODEL_ID
+        api_key = settings.NVIDIA_API_KEY
+        if api_key:
+            api_key = api_key.strip()
+        if not api_key:
+            from app.settings import DEFAULT_NVIDIA_API_KEY
+            api_key = DEFAULT_NVIDIA_API_KEY
         self.client = AsyncOpenAI(
             base_url="https://integrate.api.nvidia.com/v1",
-            api_key=settings.NVIDIA_API_KEY
+            api_key=api_key
         )
         self.stream_context = {}
         self.channel_knowledge = {
@@ -202,6 +208,39 @@ class NvidiaClient:
         except Exception as e:
             # print(f"Nvidia Engagement Error: {e}")
             return None
+
+    async def generate_radio_reply(self, user: str, query: str, model_id: str = None) -> str:
+        """
+        Generates a short, high-energy gaming radio host announcement script in Tanglish.
+        """
+        target_model = model_id or self.model_name
+        system_instructions = (
+            "You are a high-energy, friendly AI Radio Host co-hosting this gaming livestream.\n"
+            "The streamer has a radio query from a viewer. You must read the viewer's query and respond in character.\n"
+            "STRICT RULES:\n"
+            "1. Respond directly and conversationally in a natural mix of Tamil and English (Tanglish), suitable for local Indian gaming stream highlights.\n"
+            "2. Keep the answer VERY short (under 30 words, maximum 1-2 sentences) because this text will be read aloud via TTS.\n"
+            "3. DO NOT include any URLs, hashtags, or bracketed annotations (e.g. [laughter] or *cough*). Avoid punctuation that sounds weird when spoken.\n"
+            "4. Normalize emojis to spoken words (e.g. convert '😂' to 'haha' or remove it). Avoid repeated symbols.\n"
+            "5. Make it speech-safe: expand common gaming abbreviations (e.g., convert 'GG' to 'good game', 'rank push' to 'rank push').\n"
+            "6. Output ONLY the spoken lines. No headers, quotes, or preambles."
+        )
+        try:
+            response = await self.client.chat.completions.create(
+                model=target_model,
+                messages=[
+                    {"role": "system", "content": system_instructions},
+                    {"role": "user", "content": f"Viewer @{user} requests: {query}"}
+                ],
+                temperature=0.7,
+                max_tokens=1000
+            )
+            if response.choices and response.choices[0].message.content:
+                return response.choices[0].message.content.strip().replace('"', '')
+            return f"Welcome to the airwaves, {user}! Let's keep the gaming vibes high!"
+        except Exception as e:
+            print(f"Nvidia NIM Radio Reply Error: {e}")
+            return f"Attention listeners! {user} requested a radio broadcast, but the airwaves are experiencing static right now!"
 
     async def generate_custom_prompt(self, prompt: str) -> str:
         """

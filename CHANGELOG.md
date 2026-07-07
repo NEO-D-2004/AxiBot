@@ -29,6 +29,13 @@ All notable changes, new features, and visual panels added to AxiBot are documen
   * Created a dedicated **Highlights** tab inside the sidebar to monitor and copy logged highlights.
   * Clickable offset anchors: Clicking the timestamp offset in the highlights log table deep-links directly to the VOD on YouTube (`https://www.youtube.com/watch?v=VIDEO_ID&t=Xs`) at the exact moment the clip was recorded.
   * Added **Copy Link**, **Copy Stamp**, and **Clear Logs** clipboard buttons inside the dashboard panel.
+* **AI Radio Co-Host (Speech Synthesis)**:
+  * Added `!radio <query>` command trigger costing **100 AxiCoins** with a global **30-second cooldown** to prevent viewer spam.
+  * Injects query into a custom Nvidia NIM LLM co-host context, producing a clean, broadcast-safe Tamil-English (Tanglish) speech script.
+  * Links to a dedicated **Radio** panel tab inside the dashboard.
+  * Plays announcements on-stream using the Web Speech Synthesis API inside PyWebView, with volume, ducking, style, speed, and pitch parameters.
+  * Triggers background Windows `SAPI.SpVoice` PowerShell subprocess speech if the GUI dashboard window is not active.
+  * Features an **Emergency Panic Mute button** to immediately silence active audio playback and clear speech synthesis queues.
 
 ### Changed
 * **Database Schema Migrations**:

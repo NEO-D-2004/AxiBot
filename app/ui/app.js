@@ -133,6 +133,9 @@ async function initApp() {
 
   // 7. Setup Highlights Log handlers
   setupHighlightsControls();
+
+  // 8. Setup Radio Co-Host handlers
+  setupRadioHandlers();
 }
 
 function updateSidebarChannelPill(config) {
@@ -263,6 +266,8 @@ function switchTab(tabId) {
     loadAllCommands();
   } else if (tabId === 'tab-highlights') {
     loadHighlights();
+  } else if (tabId === 'tab-radio') {
+    loadRadioState();
   }
 }
 
@@ -774,7 +779,7 @@ async function loadAllSettings() {
     document.getElementById('setting-api-key').value = config.NVIDIA_API_KEY || "";
     const modelSelect = document.getElementById('setting-model-id');
     if (modelSelect) {
-      const val = config.NVIDIA_MODEL_ID || "qwen/qwen3.5-122b-a10b";
+      const val = config.NVIDIA_MODEL_ID || "openai/gpt-oss-120b";
       let exists = false;
       for (let i = 0; i < modelSelect.options.length; i++) {
         if (modelSelect.options[i].value === val) {
@@ -804,6 +809,52 @@ async function loadAllSettings() {
     if (enableCmdsCheckbox) {
       enableCmdsCheckbox.checked = config.ENABLE_COMMANDS !== false;
     }
+
+    // Load Radio Settings
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val !== undefined ? val : "";
+    };
+    const setChecked = (id, boolVal) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = boolVal === true;
+    };
+
+    setVal('setting-radio-provider', config.RADIO_PROVIDER);
+    if (typeof populateBrowserVoices === 'function') {
+      populateBrowserVoices();
+    }
+    setVal('setting-radio-voice', config.RADIO_VOICE);
+    setVal('setting-radio-language', config.RADIO_LANGUAGE);
+    setVal('setting-radio-model-id', config.RADIO_MODEL_ID);
+
+    const speedVal = parseFloat(config.RADIO_SPEED !== undefined ? config.RADIO_SPEED : 1.0);
+    const speedEl = document.getElementById('setting-radio-speed');
+    if (speedEl) speedEl.value = speedVal;
+    const speedLbl = document.getElementById('label-radio-speed');
+    if (speedLbl) speedLbl.innerText = `${speedVal.toFixed(2)}x`;
+
+    setVal('setting-radio-pitch', config.RADIO_PITCH);
+    setVal('setting-radio-energy', config.RADIO_ENERGY);
+    setVal('setting-radio-format', config.RADIO_FORMAT);
+    setVal('setting-radio-output-source', config.RADIO_OUTPUT_SOURCE);
+
+    const volVal = parseInt(config.RADIO_VOLUME !== undefined ? config.RADIO_VOLUME : -8);
+    const volEl = document.getElementById('setting-radio-volume');
+    if (volEl) volEl.value = volVal;
+    const volLbl = document.getElementById('label-radio-volume');
+    if (volLbl) volLbl.innerText = `${volVal} dB`;
+
+    const duckCheckbox = document.getElementById('setting-radio-duck-audio');
+    if (duckCheckbox) duckCheckbox.checked = config.RADIO_DUCK_AUDIO !== false;
+    
+    setVal('setting-radio-duck-amount', config.RADIO_DUCK_AMOUNT);
+    setChecked('setting-radio-auto', config.RADIO_AUTO);
+    setChecked('setting-radio-auto-approve', config.RADIO_AUTO_APPROVE);
+    setVal('setting-radio-interval', config.RADIO_INTERVAL);
+
+    // Sync state text
+    updateRadioStateUI(config.RADIO_ENABLED);
 
     // Render Streamer Connection Badge
     const statusStreamerBadge = document.getElementById('status-streamer-badge');
@@ -1598,4 +1649,411 @@ function setupHighlightsControls() {
       }
     });
   }
+}
+
+/* RADIO CO-HOST CLIENT HANDLERS & TTS ENGINE */
+let radioQueue = [];
+let radioLogs = [];
+
+window.playRadioTTS = function(text) {
+  console.log("Speaking text via browser synthesis:", text);
+  const indicator = document.getElementById('radio-state-indicator');
+  const stateText = document.getElementById('radio-state-text');
+  const activeMarquee = document.getElementById('radio-active-marquee');
+  
+  if (indicator && stateText) {
+    indicator.style.background = "#4caf50";
+    stateText.innerText = "Speaking";
+    stateText.style.color = "#4caf50";
+  }
+  if (activeMarquee) {
+    activeMarquee.innerText = text;
+  }
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    const speed = parseFloat(document.getElementById('setting-radio-speed').value) || 1.0;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = speed;
+    
+    const voices = window.speechSynthesis.getVoices();
+    const selectedVoiceName = document.getElementById('setting-radio-voice').value;
+    const voiceObj = voices.find(v => v.name === selectedVoiceName);
+    if (voiceObj) {
+      utterance.voice = voiceObj;
+    }
+    
+    utterance.onend = function() {
+      resetRadioPlayStateUI();
+    };
+    utterance.onerror = function() {
+      resetRadioPlayStateUI();
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } else {
+    console.warn("Speech synthesis API not supported in this browser.");
+    setTimeout(resetRadioPlayStateUI, 2000);
+  }
+};
+
+async function resetRadioPlayStateUI() {
+  const activeMarquee = document.getElementById('radio-active-marquee');
+  if (activeMarquee) {
+    activeMarquee.innerText = "Playback Idle";
+  }
+  try {
+    const config = await window.pywebview.api.get_settings();
+    updateRadioStateUI(config.RADIO_ENABLED);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function updateRadioStateUI(enabled) {
+  const indicator = document.getElementById('radio-state-indicator');
+  const stateText = document.getElementById('radio-state-text');
+  if (indicator && stateText) {
+    if (enabled) {
+      indicator.style.background = "#4caf50";
+      stateText.innerText = "Active";
+      stateText.style.color = "#4caf50";
+    } else {
+      indicator.style.background = "#ff4d4d";
+      stateText.innerText = "Stopped";
+      stateText.style.color = "#ff4d4d";
+    }
+  }
+}
+
+async function loadRadioState() {
+  try {
+    radioQueue = await window.pywebview.api.get_radio_queue();
+    radioLogs = await window.pywebview.api.get_radio_logs();
+    
+    const config = await window.pywebview.api.get_settings();
+    updateRadioStateUI(config.RADIO_ENABLED);
+
+    renderRadioQueueTable();
+    renderRadioLogsTable();
+  } catch (err) {
+    console.error("Error loading radio state:", err);
+  }
+}
+
+function renderRadioQueueTable() {
+  const tbody = document.getElementById('radio-queue-body');
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  if (radioQueue.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center pad-all">No pending broadcasts in the queue.</td></tr>`;
+    return;
+  }
+  radioQueue.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="viewer-name">${item.source}</td>
+      <td class="viewer-summary">${item.text}</td>
+      <td><span class="badge badge-connected" style="background: rgba(255, 193, 7, 0.15); color: #ffc107; font-size: 11px;">${item.status}</span></td>
+      <td class="text-right">
+        <div class="action-buttons-cell">
+          <button class="action-link btn-approve-broadcast" data-id="${item.id}" style="color: #4caf50;">Approve & Speak</button>
+          <button class="action-link delete btn-delete-queue" data-id="${item.id}">Delete</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  tbody.querySelectorAll('.btn-approve-broadcast').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.getAttribute('data-id'));
+      await window.pywebview.api.approve_and_speak(id);
+      await loadRadioState();
+    });
+  });
+
+  tbody.querySelectorAll('.btn-delete-queue').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = parseInt(btn.getAttribute('data-id'));
+      await window.pywebview.api.delete_queue_item(id);
+      await loadRadioState();
+    });
+  });
+}
+
+function renderRadioLogsTable() {
+  const tbody = document.getElementById('radio-logs-body');
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  if (radioLogs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center pad-all">No history logged yet.</td></tr>`;
+    return;
+  }
+  radioLogs.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="viewer-name" style="font-family: monospace; font-size: 12px;">${item.time || "-"}</td>
+      <td class="viewer-name">${item.source}</td>
+      <td class="viewer-summary" style="font-style: italic; opacity: 0.85;">${item.text}</td>
+      <td><span class="badge badge-connected" style="font-size: 11px;">${item.status}</span></td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function setupRadioHandlers() {
+  const speedSlider = document.getElementById('setting-radio-speed');
+  const speedLabel = document.getElementById('label-radio-speed');
+  if (speedSlider && speedLabel) {
+    speedSlider.addEventListener('input', () => {
+      const v = parseFloat(speedSlider.value);
+      speedLabel.innerText = `${v.toFixed(2)}x`;
+    });
+  }
+
+  const volSlider = document.getElementById('setting-radio-volume');
+  const volLabel = document.getElementById('label-radio-volume');
+  if (volSlider && volLabel) {
+    volSlider.addEventListener('input', () => {
+      const v = parseInt(volSlider.value);
+      volLabel.innerText = `${v} dB`;
+    });
+  }
+
+  const btnSave = document.getElementById('btn-save-radio-settings');
+  if (btnSave) {
+    btnSave.addEventListener('click', async () => {
+      btnSave.disabled = true;
+      try {
+        const config = await window.pywebview.api.get_settings();
+        
+        config.RADIO_PROVIDER = document.getElementById('setting-radio-provider').value;
+        config.RADIO_VOICE = document.getElementById('setting-radio-voice').value;
+        config.RADIO_LANGUAGE = document.getElementById('setting-radio-language').value;
+        config.RADIO_MODEL_ID = document.getElementById('setting-radio-model-id').value;
+        config.RADIO_SPEED = parseFloat(document.getElementById('setting-radio-speed').value);
+        config.RADIO_PITCH = document.getElementById('setting-radio-pitch').value;
+        config.RADIO_ENERGY = document.getElementById('setting-radio-energy').value;
+        config.RADIO_FORMAT = document.getElementById('setting-radio-format').value;
+        config.RADIO_OUTPUT_SOURCE = document.getElementById('setting-radio-output-source').value;
+        config.RADIO_VOLUME = parseInt(document.getElementById('setting-radio-volume').value);
+        config.RADIO_DUCK_AUDIO = document.getElementById('setting-radio-duck-audio').checked;
+        config.RADIO_DUCK_AMOUNT = document.getElementById('setting-radio-duck-amount').value;
+        
+        config.RADIO_AUTO = document.getElementById('setting-radio-auto').checked;
+        config.RADIO_AUTO_APPROVE = document.getElementById('setting-radio-auto-approve').checked;
+        config.RADIO_INTERVAL = parseInt(document.getElementById('setting-radio-interval').value);
+        
+        const success = await window.pywebview.api.save_settings(config);
+        if (success) {
+          const orig = btnSave.innerText;
+          btnSave.innerText = "Saved Voice Configurations!";
+          setTimeout(() => { btnSave.innerText = orig; }, 2000);
+        } else {
+          alert("Failed to save voice configurations.");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        btnSave.disabled = false;
+      }
+    });
+  }
+
+  const btnStart = document.getElementById('btn-radio-start');
+  if (btnStart) {
+    btnStart.addEventListener('click', async () => {
+      try {
+        const config = await window.pywebview.api.get_settings();
+        config.RADIO_ENABLED = true;
+        await window.pywebview.api.save_settings(config);
+        updateRadioStateUI(true);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnStop = document.getElementById('btn-radio-stop');
+  if (btnStop) {
+    btnStop.addEventListener('click', async () => {
+      try {
+        const config = await window.pywebview.api.get_settings();
+        config.RADIO_ENABLED = false;
+        await window.pywebview.api.save_settings(config);
+        updateRadioStateUI(false);
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        resetRadioPlayStateUI();
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnPanic = document.getElementById('btn-panic-mute');
+  if (btnPanic) {
+    btnPanic.addEventListener('click', async () => {
+      try {
+        await window.pywebview.api.control_playback("panic");
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        resetRadioPlayStateUI();
+        btnPanic.innerText = "SILENCED!";
+        setTimeout(() => { btnPanic.innerText = "EMERGENCY MUTE (PANIC)"; }, 2000);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  const btnPause = document.getElementById('btn-radio-pause');
+  if (btnPause) {
+    btnPause.addEventListener('click', () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.pause();
+        document.getElementById('radio-state-text').innerText = "Paused";
+      }
+    });
+  }
+
+  const btnResume = document.getElementById('btn-radio-resume');
+  if (btnResume) {
+    btnResume.addEventListener('click', () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.resume();
+        document.getElementById('radio-state-text').innerText = "Speaking";
+      }
+    });
+  }
+
+  const btnSkip = document.getElementById('btn-radio-skip');
+  if (btnSkip) {
+    btnSkip.addEventListener('click', () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        resetRadioPlayStateUI();
+      }
+    });
+  }
+
+  const btnReplay = document.getElementById('btn-radio-replay');
+  if (btnReplay) {
+    btnReplay.addEventListener('click', () => {
+      const activeMarquee = document.getElementById('radio-active-marquee');
+      if (activeMarquee && activeMarquee.innerText !== "Playback Idle") {
+        window.playRadioTTS(activeMarquee.innerText);
+      }
+    });
+  }
+
+  const btnGenerate = document.getElementById('btn-radio-generate');
+  const topicInput = document.getElementById('radio-topic-input');
+  if (btnGenerate && topicInput) {
+    btnGenerate.addEventListener('click', async () => {
+      const topic = topicInput.value.trim();
+      if (!topic) {
+        alert("Please enter a topic or script prompt first!");
+        return;
+      }
+      btnGenerate.disabled = true;
+      btnGenerate.innerText = "Generating...";
+      try {
+        const script = await window.pywebview.api.generate_radio_script(topic);
+        topicInput.value = script;
+      } catch (e) {
+        console.error(e);
+      } finally {
+        btnGenerate.disabled = false;
+        btnGenerate.innerText = "Generate Script";
+      }
+    });
+  }
+
+  const btnPreview = document.getElementById('btn-radio-preview');
+  if (btnPreview && topicInput) {
+    btnPreview.addEventListener('click', () => {
+      const txt = topicInput.value.trim();
+      if (!txt) {
+        alert("No script to preview. Enter a text or generate one.");
+        return;
+      }
+      window.playRadioTTS(txt);
+    });
+  }
+
+  const btnBroadcast = document.getElementById('btn-radio-broadcast');
+  if (btnBroadcast && topicInput) {
+    btnBroadcast.addEventListener('click', async () => {
+      const txt = topicInput.value.trim();
+      if (!txt) {
+        alert("Enter script text before broadcasting.");
+        return;
+      }
+      btnBroadcast.disabled = true;
+      try {
+        await window.pywebview.api.add_radio_queue_item(txt, "Streamer");
+        topicInput.value = "";
+        await loadRadioState();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        btnBroadcast.disabled = false;
+      }
+    });
+  }
+
+  const providerSelect = document.getElementById('setting-radio-provider');
+  if (providerSelect) {
+    providerSelect.addEventListener('change', () => {
+      populateBrowserVoices();
+    });
+  }
+}
+
+function populateBrowserVoices() {
+  const providerSelect = document.getElementById('setting-radio-provider');
+  if (!providerSelect) return;
+  const provider = providerSelect.value;
+  const voiceSelect = document.getElementById('setting-radio-voice');
+  if (!voiceSelect) return;
+
+  const currentVal = voiceSelect.value;
+
+  if (provider === "SAPI5 Native Windows") {
+    if ('speechSynthesis' in window) {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        voiceSelect.innerHTML = "";
+        voices.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.name;
+          opt.innerText = `${v.name} (${v.lang})`;
+          voiceSelect.appendChild(opt);
+        });
+        if (currentVal && Array.from(voiceSelect.options).some(o => o.value === currentVal)) {
+          voiceSelect.value = currentVal;
+        }
+      }
+    }
+  } else {
+    voiceSelect.innerHTML = `
+      <option value="Tamil Gaming Host">Tamil Gaming Host</option>
+      <option value="English Host (Male)">English Host (Male)</option>
+      <option value="English Host (Female)">English Host (Female)</option>
+    `;
+    if (currentVal && Array.from(voiceSelect.options).some(o => o.value === currentVal)) {
+      voiceSelect.value = currentVal;
+    }
+  }
+}
+
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    populateBrowserVoices();
+  };
 }

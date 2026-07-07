@@ -77,6 +77,9 @@ class WebAPI:
             "subs": 0,
             "messages_processed": 0
         }
+        self.radio_queue = []
+        self.radio_logs = []
+        self.radio_queue_id_counter = 0
         # Pre-populate settings from .env
         load_dotenv(override=True)
 
@@ -108,6 +111,10 @@ class WebAPI:
         """ Returns True if the Streamer YouTube OAuth token exists """
         token_path = settings.YOUTUBE_STREAMER_TOKEN_PATH
         return os.path.exists(token_path)
+
+    def check_auth_status(self):
+        """ Returns True if the Streamer YouTube OAuth token exists (used by frontend) """
+        return self.check_streamer_auth_status()
 
     def check_bot_auth_status(self):
         """ Returns True if the Bot YouTube OAuth token exists """
@@ -284,7 +291,24 @@ class WebAPI:
             "ENABLE_DATABASE": settings.ENABLE_DATABASE,
             "ENABLE_COMMANDS": settings.ENABLE_COMMANDS,
             "STREAMER_CHANNEL_NAME": settings.STREAMER_CHANNEL_NAME,
-            "STREAMER_AVATAR_URL": avatar_url
+            "STREAMER_AVATAR_URL": avatar_url,
+            "RADIO_MODEL_ID": settings.RADIO_MODEL_ID,
+            "RADIO_ENABLED": settings.RADIO_ENABLED,
+            "RADIO_AUTO": settings.RADIO_AUTO,
+            "RADIO_INTERVAL": settings.RADIO_INTERVAL,
+            "RADIO_PROVIDER": settings.RADIO_PROVIDER,
+            "RADIO_VOICE": settings.RADIO_VOICE,
+            "RADIO_LANGUAGE": settings.RADIO_LANGUAGE,
+            "RADIO_SPEED": settings.RADIO_SPEED,
+            "RADIO_PITCH": settings.RADIO_PITCH,
+            "RADIO_ENERGY": settings.RADIO_ENERGY,
+            "RADIO_FORMAT": settings.RADIO_FORMAT,
+            "RADIO_OUTPUT_SOURCE": settings.RADIO_OUTPUT_SOURCE,
+            "RADIO_VOLUME": settings.RADIO_VOLUME,
+            "RADIO_DUCK_AUDIO": settings.RADIO_DUCK_AUDIO,
+            "RADIO_DUCK_AMOUNT": settings.RADIO_DUCK_AMOUNT,
+            "RADIO_AUTO_APPROVE": settings.RADIO_AUTO_APPROVE,
+            "CHATTERBOX_API_KEY": settings.CHATTERBOX_API_KEY
         }
 
     def save_settings(self, new_settings):
@@ -297,15 +321,51 @@ class WebAPI:
             settings.NVIDIA_API_KEY = new_settings.get("NVIDIA_API_KEY", settings.NVIDIA_API_KEY)
             settings.NVIDIA_MODEL_ID = new_settings.get("NVIDIA_MODEL_ID", settings.NVIDIA_MODEL_ID)
             if "ENABLE_DATABASE" in new_settings:
-                settings.ENABLE_DATABASE = new_settings.get("ENABLE_DATABASE") == "True"
+                settings.ENABLE_DATABASE = new_settings.get("ENABLE_DATABASE") == "True" or new_settings.get("ENABLE_DATABASE") is True
             if "ENABLE_COMMANDS" in new_settings:
-                settings.ENABLE_COMMANDS = new_settings.get("ENABLE_COMMANDS") == "True"
+                settings.ENABLE_COMMANDS = new_settings.get("ENABLE_COMMANDS") == "True" or new_settings.get("ENABLE_COMMANDS") is True
             if "STREAMER_CHANNEL_NAME" in new_settings:
                 settings.STREAMER_CHANNEL_NAME = new_settings.get("STREAMER_CHANNEL_NAME", "")
             
             # Cooldown check
             cooldown_val = int(new_settings.get("COOLDOWN_SECONDS", 60))
             settings.COOLDOWN_SECONDS = cooldown_val
+
+            # Radio configuration save parameters
+            if "RADIO_MODEL_ID" in new_settings:
+                settings.RADIO_MODEL_ID = new_settings.get("RADIO_MODEL_ID")
+            if "RADIO_ENABLED" in new_settings:
+                settings.RADIO_ENABLED = str(new_settings.get("RADIO_ENABLED")) == "True" or new_settings.get("RADIO_ENABLED") is True
+            if "RADIO_AUTO" in new_settings:
+                settings.RADIO_AUTO = str(new_settings.get("RADIO_AUTO")) == "True" or new_settings.get("RADIO_AUTO") is True
+            if "RADIO_INTERVAL" in new_settings:
+                settings.RADIO_INTERVAL = int(new_settings.get("RADIO_INTERVAL"))
+            if "RADIO_PROVIDER" in new_settings:
+                settings.RADIO_PROVIDER = new_settings.get("RADIO_PROVIDER")
+            if "RADIO_VOICE" in new_settings:
+                settings.RADIO_VOICE = new_settings.get("RADIO_VOICE")
+            if "RADIO_LANGUAGE" in new_settings:
+                settings.RADIO_LANGUAGE = new_settings.get("RADIO_LANGUAGE")
+            if "RADIO_SPEED" in new_settings:
+                settings.RADIO_SPEED = float(new_settings.get("RADIO_SPEED"))
+            if "RADIO_PITCH" in new_settings:
+                settings.RADIO_PITCH = new_settings.get("RADIO_PITCH")
+            if "RADIO_ENERGY" in new_settings:
+                settings.RADIO_ENERGY = new_settings.get("RADIO_ENERGY")
+            if "RADIO_FORMAT" in new_settings:
+                settings.RADIO_FORMAT = new_settings.get("RADIO_FORMAT")
+            if "RADIO_OUTPUT_SOURCE" in new_settings:
+                settings.RADIO_OUTPUT_SOURCE = new_settings.get("RADIO_OUTPUT_SOURCE")
+            if "RADIO_VOLUME" in new_settings:
+                settings.RADIO_VOLUME = int(new_settings.get("RADIO_VOLUME"))
+            if "RADIO_DUCK_AUDIO" in new_settings:
+                settings.RADIO_DUCK_AUDIO = str(new_settings.get("RADIO_DUCK_AUDIO")) == "True" or new_settings.get("RADIO_DUCK_AUDIO") is True
+            if "RADIO_DUCK_AMOUNT" in new_settings:
+                settings.RADIO_DUCK_AMOUNT = int(new_settings.get("RADIO_DUCK_AMOUNT"))
+            if "RADIO_AUTO_APPROVE" in new_settings:
+                settings.RADIO_AUTO_APPROVE = str(new_settings.get("RADIO_AUTO_APPROVE")) == "True" or new_settings.get("RADIO_AUTO_APPROVE") is True
+            if "CHATTERBOX_API_KEY" in new_settings:
+                settings.CHATTERBOX_API_KEY = new_settings.get("CHATTERBOX_API_KEY")
 
             # Save locally to storage/settings.json
             from app.settings import save_local_settings
@@ -447,7 +507,25 @@ class WebAPI:
             else:
                 print("WARNING: No active live stream detected. Bot will operate in polling idle mode.")
 
-            router = MessageRouter(gemini_client=gemini, youtube_client=youtube)
+            # Create a callback to speak text in the GUI via JS synthesis or fallback to python SAPI5
+            def play_tts_callback(text):
+                if getattr(settings, 'RADIO_PROVIDER', '') == "Chatterbox Multilingual TTS":
+                    self._speak_chatterbox_tts(text)
+                else:
+                    try:
+                        import json
+                        window.evaluate_js(f"if (window.playRadioTTS) {{ window.playRadioTTS({json.dumps(text)}); }}")
+                    except Exception as e:
+                        # Fallback to local python speech synthese if PyWebView window not ready/active
+                        import subprocess
+                        try:
+                            escaped_text = text.replace("'", "''").replace('"', '""')
+                            cmd = f"(New-Object -ComObject SAPI.SpVoice).Speak('{escaped_text}')"
+                            subprocess.Popen(["powershell", "-Command", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        except Exception:
+                            pass
+
+            router = MessageRouter(gemini_client=gemini, youtube_client=youtube, tts_callback=play_tts_callback)
             
             # Setup route counting
             orig_route = router.route_message
@@ -804,6 +882,236 @@ class WebAPI:
         except Exception as e:
             print(f"Error marking tour as done: {e}")
             return False
+
+    def get_radio_queue(self):
+        """ Returns all items in the pending audio queue """
+        return self.radio_queue
+
+    def get_radio_logs(self):
+        """ Returns all items in the radio activity log """
+        return self.radio_logs
+
+    def add_radio_queue_item(self, text, source="Streamer"):
+        """ Adds a manually composed script to the queue """
+        self.radio_queue_id_counter += 1
+        item = {
+            "id": self.radio_queue_id_counter,
+            "text": text,
+            "source": source,
+            "status": "Pending",
+            "time": datetime.now().strftime("%H:%M:%S")
+        }
+        self.radio_queue.append(item)
+        print(f"Added item to Radio Queue: {text} (Source: {source})")
+        
+        if settings.RADIO_AUTO_APPROVE:
+            self.approve_and_speak(item["id"])
+        return True
+
+    def approve_and_speak(self, queue_id):
+        """ Approves a queue item and plays it """
+        found_item = None
+        for item in self.radio_queue:
+            if item["id"] == int(queue_id):
+                found_item = item
+                break
+        
+        if found_item:
+            self.radio_queue.remove(found_item)
+            found_item["status"] = "Played"
+            self.radio_logs.append(found_item)
+            print(f"[Radio Co-Host] Speaking approved text: {found_item['text']}")
+            
+            if getattr(settings, 'RADIO_PROVIDER', '') == "Chatterbox Multilingual TTS":
+                self._speak_chatterbox_tts(found_item['text'])
+            else:
+                try:
+                    window.evaluate_js(f"if (window.playRadioTTS) {{ window.playRadioTTS({json.dumps(found_item['text'])}); }}")
+                except Exception as e:
+                    import subprocess
+                    try:
+                        escaped_text = found_item['text'].replace("'", "''").replace('"', '""')
+                        cmd = f"(New-Object -ComObject SAPI.SpVoice).Speak('{escaped_text}')"
+                        subprocess.Popen(["powershell", "-Command", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    except Exception:
+                        pass
+            return True
+        return False
+
+    def _generate_chatterbox_tts_sync(self, text):
+        import os
+        import riva.client
+        from app.settings import settings
+        
+        api_key = getattr(settings, 'CHATTERBOX_API_KEY', '')
+        if api_key:
+            api_key = api_key.strip()
+        if not api_key:
+            from app.settings import DEFAULT_NVIDIA_API_KEY
+            api_key = DEFAULT_NVIDIA_API_KEY
+            
+        selected_voice = getattr(settings, 'RADIO_VOICE', 'Tamil Gaming Host')
+        riva_voice = "Chatterbox-Multilingual.en-US.Male"
+        if "female" in selected_voice.lower():
+            riva_voice = "Chatterbox-Multilingual.en-US.Female"
+            
+        lang_code = getattr(settings, 'RADIO_LANGUAGE', 'ta-IN')
+        
+        print(f"[Riva Client] Querying gRPC server for TTS: '{text}' (Voice: {riva_voice}, Lang: {lang_code})")
+        
+        auth = riva.client.Auth(
+            uri="grpc.nvcf.nvidia.com:443",
+            use_ssl=True,
+            metadata_args=[
+                ("function-id", "ddacc747-1269-4fab-bfd9-8f593dead106"),
+                ("authorization", f"Bearer {api_key}")
+            ]
+        )
+        
+        tts_service = riva.client.SpeechSynthesisService(auth)
+        
+        response = tts_service.synthesize(
+            text=text,
+            voice_name=riva_voice,
+            language_code=lang_code
+        )
+        
+        os.makedirs("storage", exist_ok=True)
+        wav_path = "storage/radio_tts.wav"
+        with open(wav_path, "wb") as f:
+            f.write(response.audio)
+            
+        return wav_path
+
+    def _update_ui_speaking(self, text):
+        try:
+            import json
+            window.evaluate_js(f"document.getElementById('radio-active-marquee').innerText = {json.dumps(text)};")
+            window.evaluate_js("document.getElementById('radio-state-indicator').style.background = '#4caf50';")
+            window.evaluate_js("document.getElementById('radio-state-text').innerText = 'Speaking';")
+            window.evaluate_js("document.getElementById('radio-state-text').style.color = '#4caf50';")
+        except Exception:
+            pass
+
+    def _generate_google_tts_sync(self, text, lang="ta"):
+        import urllib.request
+        import urllib.parse
+        import os
+        
+        encoded_text = urllib.parse.quote(text)
+        url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q={encoded_text}&tl={lang}"
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        req = urllib.request.Request(url, headers=headers)
+        
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                os.makedirs("storage", exist_ok=True)
+                mp3_path = "storage/radio_tts.mp3"
+                with open(mp3_path, "wb") as f:
+                    f.write(response.read())
+                return mp3_path
+        except Exception as e:
+            raise Exception(f"Google TTS Generation failed: {e}")
+
+    def _play_audio_mci(self, file_path):
+        import ctypes
+        import time
+        import threading
+        
+        def run():
+            try:
+                ctypes.windll.winmm.mciSendStringW("close mymp3", None, 0, 0)
+                ctypes.windll.winmm.mciSendStringW(f"open \"{file_path}\" type mpegvideo alias mymp3", None, 0, 0)
+                ctypes.windll.winmm.mciSendStringW("play mymp3", None, 0, 0)
+                
+                buffer = ctypes.create_unicode_buffer(128)
+                while True:
+                    ctypes.windll.winmm.mciSendStringW("status mymp3 mode", buffer, 128, 0)
+                    if buffer.value != "playing":
+                        break
+                    time.sleep(0.1)
+                ctypes.windll.winmm.mciSendStringW("close mymp3", None, 0, 0)
+            except Exception as e:
+                print(f"MCI playback error: {e}")
+        
+        threading.Thread(target=run, daemon=True).start()
+
+    def _speak_chatterbox_tts(self, text):
+        def run_thread():
+            try:
+                # Generate WAV file from NVIDIA Integrate API
+                wav_path = self._generate_chatterbox_tts_sync(text)
+                # Play WAV asynchronously using native winsound on Windows
+                import winsound
+                # Cancel any playing background sounds
+                winsound.PlaySound(None, winsound.SND_PURGE)
+                winsound.PlaySound(wav_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+                self._update_ui_speaking(text)
+            except Exception as e:
+                print(f"Chatterbox API failed ({e}). Falling back to Google Neural Translate TTS...")
+                try:
+                    lang_code = "ta" if "ta" in getattr(settings, 'RADIO_LANGUAGE', 'ta-IN').lower() else "en"
+                    audio_path = self._generate_google_tts_sync(text, lang=lang_code)
+                    self._play_audio_mci(audio_path)
+                    self._update_ui_speaking(text)
+                except Exception as ex:
+                    print(f"Google TTS Fallback failed ({ex}). Falling back to Windows SAPI5...")
+                    import subprocess
+                    try:
+                        escaped_text = text.replace("'", "''").replace('"', '""')
+                        cmd = f"(New-Object -ComObject SAPI.SpVoice).Speak('{escaped_text}')"
+                        subprocess.Popen(["powershell", "-Command", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    except Exception:
+                        pass
+        import threading
+        threading.Thread(target=run_thread, daemon=True).start()
+
+    def delete_queue_item(self, queue_id):
+        """ Deletes a pending queue item """
+        for item in self.radio_queue:
+            if item["id"] == int(queue_id):
+                self.radio_queue.remove(item)
+                print(f"Deleted radio queue item ID {queue_id}")
+                return True
+        return False
+
+    def generate_radio_script(self, topic):
+        """ Asynchronously calls the LLM to generate a clean broadcast-safe Tanglish script """
+        if not topic:
+            return "No topic specified."
+        
+        from app.nvidia_client import NvidiaClient
+        gemini = NvidiaClient()
+        
+        async def run_gen():
+            try:
+                return await gemini.generate_radio_reply("Streamer", topic, model_id=settings.RADIO_MODEL_ID)
+            except Exception as e:
+                return f"Generation error: {e}"
+        
+        future = asyncio.run_coroutine_threadsafe(run_gen(), self.loop)
+        return future.result()
+
+    def control_playback(self, action):
+        """ Handles playback controls (Pause, Resume, Skip, Replay, Panic Mute) """
+        print(f"[Radio Playback Control] Action triggered: {action}")
+        if action == "panic" or action == "stop":
+            try:
+                import winsound
+                winsound.PlaySound(None, winsound.SND_PURGE)
+            except Exception:
+                pass
+            try:
+                import ctypes
+                ctypes.windll.winmm.mciSendStringW("close mymp3", None, 0, 0)
+            except Exception:
+                pass
+            print("Emergency stop executed: all TTS voice channels silenced.")
+            return True
+        return True
 
 def start_asyncio_thread(loop):
     asyncio.set_event_loop(loop)

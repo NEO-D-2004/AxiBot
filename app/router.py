@@ -6,14 +6,16 @@ from app.moderation_filter import ModerationFilter
 from app.database import DatabaseManager
 
 class MessageRouter:
-    def __init__(self, gemini_client=None, youtube_client=None):
+    def __init__(self, gemini_client=None, youtube_client=None, tts_callback=None):
         self.gemini_client = gemini_client
         self.youtube_client = youtube_client
+        self.tts_callback = tts_callback
         self.db = DatabaseManager()
         self.bot_name = settings.BOT_NAME.lower()
         self.cooldowns = {}
         self.COOLDOWN_SECONDS = getattr(settings, 'COOLDOWN_SECONDS', 60)
         self.chat_history = collections.deque(maxlen=15)
+        self.last_radio_time = 0
         
         # Per-user recent history for summarization (10 messages trigger)
         self.user_session_history = collections.defaultdict(lambda: collections.deque(maxlen=10))
@@ -184,6 +186,65 @@ class MessageRouter:
                     self.youtube_client.send_message(reply)
                 return
             
+            # 4. !radio <query>
+            elif cmd_name == "radio":
+                if not user_id:
+                    return
+                
+                if not getattr(settings, 'RADIO_ENABLED', True):
+                    reply = f"@{user} The radio co-host feature is currently disabled."
+                    if self.youtube_client:
+                        self.youtube_client.send_message(reply)
+                    return
+
+                user_data = self.db.get_user(user_id)
+                current_points = user_data["points"] if user_data else 0
+                
+                if current_points < 100:
+                    reply = f"@{user} Insufficient AxiCoins! !radio costs 100 AxiCoins. You currently have {current_points}."
+                    if self.youtube_client:
+                        self.youtube_client.send_message(reply)
+                    return
+                
+                now = time.time()
+                elapsed_cooldown = now - self.last_radio_time
+                if elapsed_cooldown < 30:
+                    remaining = int(30 - elapsed_cooldown)
+                    reply = f"@{user} Radio is on cooldown! Please wait {remaining}s."
+                    if self.youtube_client:
+                        self.youtube_client.send_message(reply)
+                    return
+                
+                if not cmd_args:
+                    reply = f"@{user} Please specify a prompt/query for the radio! e.g., !radio hello stream"
+                    if self.youtube_client:
+                        self.youtube_client.send_message(reply)
+                    return
+                
+                query = " ".join(cmd_args)
+                self.last_radio_time = now
+                
+                # Deduct points
+                self.db.deduct_points(user_id, 100)
+                
+                # Generate reply using separate radio model if specified
+                radio_model = getattr(settings, 'RADIO_MODEL_ID', settings.NVIDIA_MODEL_ID)
+                
+                # Query the LLM for a speech-safe broadcast script
+                reply_text = await self.gemini_client.generate_radio_reply(user, query, model_id=radio_model)
+                
+                # Send text response to chat
+                chat_reply = f"@{user} [Radio] {reply_text}"
+                if self.youtube_client:
+                    self.youtube_client.send_message(chat_reply)
+                
+                # Play audio via callback or fallback SAPI5
+                if self.tts_callback:
+                    self.tts_callback(reply_text)
+                else:
+                    self._speak_text_sapi5(reply_text)
+                return
+            
             # 4. Custom Command from DB
             else:
                 db_cmd = self.db.get_command(cmd_name)
@@ -301,3 +362,17 @@ class MessageRouter:
             return f"@{clean_user} {rest_of_reply}"
         else:
             return f"@{clean_user} {clean_reply}"
+
+    def _speak_text_sapi5(self, text):
+        import subprocess
+        try:
+            escaped_text = text.replace("'", "''").replace('"', '""')
+            escaped_text = escaped_text[:300]
+            cmd = f"(New-Object -ComObject SAPI.SpVoice).Speak('{escaped_text}')"
+            subprocess.Popen(
+                ["powershell", "-Command", cmd],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        except Exception as e:
+            print(f"Failed to play SAPI5 TTS: {e}")
