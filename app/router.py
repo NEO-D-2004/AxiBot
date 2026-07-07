@@ -65,6 +65,7 @@ class MessageRouter:
         message = message_data.get('message')
         if not message or not isinstance(message, str):
             return
+        message = message.strip()
 
         # 0. Self-Reply Prevention
         # Ignore messages from the bot itself

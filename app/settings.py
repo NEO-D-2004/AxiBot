@@ -1,6 +1,19 @@
 import os
 import json
+import sys
 from pydantic_settings import BaseSettings
+
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(errors='replace')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(errors='replace')
+    except Exception:
+        pass
+
 
 DEFAULT_NVIDIA_API_KEY = "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"
 

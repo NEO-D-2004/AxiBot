@@ -669,6 +669,11 @@ function setupFormListeners() {
       settingsObj["ENABLE_DATABASE"] = enableDbCheckbox.checked ? "True" : "False";
     }
 
+    const enableCmdsCheckbox = document.getElementById('setting-enable-commands');
+    if (enableCmdsCheckbox) {
+      settingsObj["ENABLE_COMMANDS"] = enableCmdsCheckbox.checked ? "True" : "False";
+    }
+
     try {
       const success = await window.pywebview.api.save_settings(settingsObj);
       if (success) {
@@ -704,18 +709,29 @@ function setupFormListeners() {
     });
   }
 
-  // Commands toggle auto-save
+  // Commands toggles auto-save & synchronization
+  const handleCommandsToggle = async (isChecked) => {
+    try {
+      const config = await window.pywebview.api.get_settings();
+      config["ENABLE_COMMANDS"] = isChecked ? "True" : "False";
+      await window.pywebview.api.save_settings(config);
+      
+      const chk1 = document.getElementById('setting-enable-commands');
+      const chk2 = document.getElementById('setting-enable-commands-tab');
+      if (chk1) chk1.checked = isChecked;
+      if (chk2) chk2.checked = isChecked;
+    } catch (err) {
+      console.error("Failed to auto-save commands status:", err);
+    }
+  };
+
   const enableCmdsCheckbox = document.getElementById('setting-enable-commands');
   if (enableCmdsCheckbox) {
-    enableCmdsCheckbox.addEventListener('change', async () => {
-      try {
-        const config = await window.pywebview.api.get_settings();
-        config["ENABLE_COMMANDS"] = enableCmdsCheckbox.checked ? "True" : "False";
-        await window.pywebview.api.save_settings(config);
-      } catch (err) {
-        console.error("Failed to auto-save commands status:", err);
-      }
-    });
+    enableCmdsCheckbox.addEventListener('change', () => handleCommandsToggle(enableCmdsCheckbox.checked));
+  }
+  const enableCmdsCheckboxTab = document.getElementById('setting-enable-commands-tab');
+  if (enableCmdsCheckboxTab) {
+    enableCmdsCheckboxTab.addEventListener('change', () => handleCommandsToggle(enableCmdsCheckboxTab.checked));
   }
 
   // Engagement Settings form
@@ -808,6 +824,10 @@ async function loadAllSettings() {
     const enableCmdsCheckbox = document.getElementById('setting-enable-commands');
     if (enableCmdsCheckbox) {
       enableCmdsCheckbox.checked = config.ENABLE_COMMANDS !== false;
+    }
+    const enableCmdsCheckboxTab = document.getElementById('setting-enable-commands-tab');
+    if (enableCmdsCheckboxTab) {
+      enableCmdsCheckboxTab.checked = config.ENABLE_COMMANDS !== false;
     }
 
     // Load Radio Settings
